@@ -13,6 +13,7 @@ public sealed class AppState
 
     public string InstallDirectory { get; set; } = DefaultInstallDirectory;
     public string Language { get; set; } = "zh";
+    public string Theme { get; set; } = "light";
     public bool UseMono { get; set; } = true;
     public int? SelectedMajor { get; set; }
     public bool DeleteArchiveAfterInstall { get; set; }

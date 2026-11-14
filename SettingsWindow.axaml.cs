@@ -1,5 +1,7 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using GodotManager.Services;
 using GodotManager.ViewModels;
 
 namespace GodotManager;
@@ -14,6 +16,9 @@ public partial class SettingsWindow : Window
     public SettingsWindow(MainWindowViewModel viewModel) : this()
     {
         DataContext = viewModel;
+        VersionTextBlock.Text = AppInfo.Version;
+        AuthorTextBlock.Text = AppInfo.Author;
+        RepositoryLink.Content = AppInfo.RepositoryDisplay;
     }
 
     private void About_Click(object? sender, RoutedEventArgs e)
@@ -24,5 +29,15 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void Done_Click(object? sender, RoutedEventArgs e) => Close();
+    private void RepositoryLink_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            ShellService.OpenUrl(AppInfo.RepositoryUrl);
+        }
+        catch (Exception)
+        {
+            // 打开链接失败时不影响设置窗口。
+        }
+    }
 }

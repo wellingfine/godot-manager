@@ -43,6 +43,10 @@ public sealed class LocalizationService : ObservableObject
     }
 
     public string AppTitle => T(nameof(AppTitle));
+    public string AvailableLabel => T(nameof(AvailableLabel));
+    public string DownloadExtract => T(nameof(DownloadExtract));
+    public string NoSelection => T(nameof(NoSelection));
+    public string ThemeTooltip => T(nameof(ThemeTooltip));
     public string SubtitlePrefix => T(nameof(SubtitlePrefix));
     public string SubtitleSuffix => T(nameof(SubtitleSuffix));
     public string OpenFolderTooltip => T(nameof(OpenFolderTooltip));
@@ -65,10 +69,15 @@ public sealed class LocalizationService : ObservableObject
     public string TabAll => T(nameof(TabAll));
     public string SettingsTitle => T(nameof(SettingsTitle));
     public string LanguageLabel => T(nameof(LanguageLabel));
+    public string LanguageZh => T(nameof(LanguageZh));
+    public string LanguageEn => T(nameof(LanguageEn));
     public string LanguageHint => T(nameof(LanguageHint));
     public string InstallFolderLabel => T(nameof(InstallFolderLabel));
     public string InstallFolderHint => T(nameof(InstallFolderHint));
     public string Browse => T(nameof(Browse));
+    public string BrowseLabel => T(nameof(BrowseLabel));
+    public string VersionLabel => T(nameof(VersionLabel));
+    public string SettingsAutosave => T(nameof(SettingsAutosave));
     public string DeletePolicyLabel => T(nameof(DeletePolicyLabel));
     public string DeletePolicyHint => T(nameof(DeletePolicyHint));
     public string DeletePolicyKeep => T(nameof(DeletePolicyKeep));
@@ -86,14 +95,14 @@ public sealed class LocalizationService : ObservableObject
     private static readonly Dictionary<string, string> Zh = new()
     {
         ["AppTitle"] = "Godot 版本管理器",
-        ["SubtitlePrefix"] = "版本来自 ",
+        ["SubtitlePrefix"] = "数据来自 ",
         ["SubtitleSuffix"] = "，下载解压后即可直接启动",
         ["OpenFolderTooltip"] = "点击在文件浏览器中打开",
         ["StatusOpenUrlFailed"] = "打开链接失败：{0}",
         ["SettingsTooltip"] = "设置",
         ["SearchPlaceholder"] = "搜索版本号，例如 4.5",
         ["RefreshTooltip"] = "刷新版本列表（30 秒内重复点击使用本地缓存）",
-        ["ChannelLabel"] = "发布类型",
+        ["ChannelLabel"] = "版本类型",
         ["ChannelTooltip"] = "勾选要显示的版本类型，默认勾 Stable / RC / Beta",
         ["DotNetLabel"] = ".NET 版",
         ["Download"] = "下载",
@@ -111,12 +120,14 @@ public sealed class LocalizationService : ObservableObject
         ["TypeStandard"] = "标准版",
         ["SettingsTitle"] = "设置",
         ["LanguageLabel"] = "界面语言",
+        ["LanguageZh"] = "简体中文",
+        ["LanguageEn"] = "English",
         ["LanguageHint"] = "切换后立即生效，下次打开会记住你的选择。",
         ["InstallFolderLabel"] = "Godot 安装位置",
         ["InstallFolderHint"] = "已安装版本与新下载的版本都放在这里；启动时会扫描该目录。",
         ["Browse"] = "更改...",
-        ["DeletePolicyLabel"] = "下载安装包",
-        ["DeletePolicyHint"] = "选择安装完成后如何处置安装包；两种方式都不会动安装目录里已有的文件。",
+        ["DeletePolicyLabel"] = "安装包处理",
+        ["DeletePolicyHint"] = "两种方式都不会动安装目录里已有的文件。",
         ["DeletePolicyKeep"] = "保留 30 天，启动时自动清理过期文件",
         ["DeletePolicyImmediate"] = "安装完成后立即删除",
         ["Done"] = "完成",
@@ -158,7 +169,17 @@ public sealed class LocalizationService : ObservableObject
         ["StatusPeriod"] = "。",
         ["StatusDirFailed"] = "设置安装目录失败：{0}",
         ["StatusSettingsSaved"] = "设置已保存。",
-        ["FilteredCount"] = "显示 {0} 个版本"
+        ["FilteredCount"] = "{0} 个版本",
+        ["AvailableLabel"] = "可用版本",
+        ["DownloadExtract"] = "下载并解压",
+        ["NoSelection"] = "请选择一个版本",
+        ["ThemeTooltip"] = "切换深色 / 浅色主题",
+        ["SelectedItem"] = "已选 {0} · {1}",
+        ["InstalledCount"] = "{0} 个版本",
+        ["ChannelNone"] = "未选择",
+        ["BrowseLabel"] = "更改目录",
+        ["VersionLabel"] = "版本",
+        ["SettingsAutosave"] = "设置立即生效，无需保存"
     };
 
     private static readonly Dictionary<string, string> En = new()
@@ -189,12 +210,14 @@ public sealed class LocalizationService : ObservableObject
         ["TypeStandard"] = "Standard",
         ["SettingsTitle"] = "Settings",
         ["LanguageLabel"] = "Display language",
+        ["LanguageZh"] = "Chinese",
+        ["LanguageEn"] = "English",
         ["LanguageHint"] = "Applies immediately and is remembered next time.",
         ["InstallFolderLabel"] = "Installation folder",
         ["InstallFolderHint"] = "Installed and newly downloaded versions live here. This folder is scanned on startup.",
         ["Browse"] = "Browse...",
-        ["DeletePolicyLabel"] = "Downloaded archives",
-        ["DeletePolicyHint"] = "Choose what happens to the archive after installation. Existing files in the installation folder are never touched.",
+        ["DeletePolicyLabel"] = "Archive handling",
+        ["DeletePolicyHint"] = "Existing files in the installation folder are never touched.",
         ["DeletePolicyKeep"] = "Keep for 30 days, clean up expired files on startup",
         ["DeletePolicyImmediate"] = "Delete right after installation",
         ["Done"] = "Done",
@@ -236,6 +259,16 @@ public sealed class LocalizationService : ObservableObject
         ["StatusPeriod"] = ".",
         ["StatusDirFailed"] = "Failed to set installation folder: {0}",
         ["StatusSettingsSaved"] = "Settings saved.",
-        ["FilteredCount"] = "Showing {0} versions"
+        ["FilteredCount"] = "{0} versions",
+        ["AvailableLabel"] = "Available",
+        ["DownloadExtract"] = "Download & extract",
+        ["NoSelection"] = "Select a version",
+        ["ThemeTooltip"] = "Toggle dark / light theme",
+        ["SelectedItem"] = "Selected {0} · {1}",
+        ["InstalledCount"] = "{0} versions",
+        ["ChannelNone"] = "None",
+        ["BrowseLabel"] = "Change folder",
+        ["VersionLabel"] = "Version",
+        ["SettingsAutosave"] = "Changes apply instantly — no need to save"
     };
 }

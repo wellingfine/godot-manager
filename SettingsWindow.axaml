@@ -4,57 +4,85 @@
         x:Class="GodotManager.SettingsWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding L.SettingsTitle}"
-        Width="480"
+        Width="460"
         SizeToContent="Height"
         CanResize="False"
-        WindowStartupLocation="CenterOwner">
-    <StackPanel Margin="20" Spacing="14">
-        <Border Classes="card">
-            <StackPanel Spacing="6">
-                <TextBlock Classes="h2" Text="{Binding L.LanguageLabel}" />
-                <ComboBox SelectedIndex="{Binding LanguageIndex}" HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="中文" />
-                    <ComboBoxItem Content="English" />
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource SurfaceBrush}">
+    <StackPanel Margin="24,20">
+        <!-- 关于：单独一块，居中展示图标、版本、作者与仓库 -->
+        <Border Background="{DynamicResource SidePanelBrush}" CornerRadius="12" Padding="16,18">
+            <StackPanel HorizontalAlignment="Center" Spacing="8">
+                <Button Width="52" Height="52" Padding="0" Background="Transparent" BorderThickness="0"
+                        HorizontalAlignment="Center" HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center"
+                        ToolTip.Tip="{Binding L.AboutLabel}" Click="About_Click">
+                    <Border Width="46" Height="46" CornerRadius="12" Background="{DynamicResource AccentBrush}">
+                        <TextBlock Text="G" FontSize="24" FontWeight="Bold" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </Button>
+                <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
+                    <TextBlock Classes="muted" Text="{Binding L.VersionLabel}" />
+                    <TextBlock x:Name="VersionTextBlock" Classes="muted" />
+                    <TextBlock Classes="muted" Text="·" />
+                    <TextBlock Classes="muted" Text="{Binding L.AboutAuthor}" />
+                    <TextBlock x:Name="AuthorTextBlock" Classes="muted" />
+                </StackPanel>
+                <Button x:Name="RepositoryLink" Classes="link" HorizontalAlignment="Center"
+                        Foreground="{DynamicResource AccentTextBrush}" Click="RepositoryLink_Click" />
+            </StackPanel>
+        </Border>
+
+        <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,18,0,0" />
+
+        <!-- 界面语言 -->
+        <Grid Margin="0,18,0,0" ColumnDefinitions="130,*">
+            <TextBlock Grid.Column="0" Classes="section" Text="{Binding L.LanguageLabel}"
+                       VerticalAlignment="Top" Margin="0,8,0,0" />
+            <StackPanel Grid.Column="1" Spacing="8">
+                <ComboBox SelectedIndex="{Binding LanguageIndex}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="{Binding L.LanguageZh}" />
+                    <ComboBoxItem Content="{Binding L.LanguageEn}" />
                 </ComboBox>
                 <TextBlock Classes="muted" Text="{Binding L.LanguageHint}" TextWrapping="Wrap" />
             </StackPanel>
-        </Border>
+        </Grid>
 
-        <Border Classes="card">
-            <StackPanel Spacing="6">
-                <TextBlock Classes="h2" Text="{Binding L.InstallFolderLabel}" />
-                <Grid ColumnDefinitions="*,Auto">
-                    <Border Grid.Column="0" Classes="panel" Padding="8,6" MinHeight="32">
-                        <HyperlinkButton Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                                         Command="{Binding OpenInstallDirectoryCommand}"
-                                         ToolTip.Tip="{Binding L.OpenFolderTooltip}">
-                            <TextBlock Text="{Binding InstallDirectory}" TextTrimming="CharacterEllipsis"
-                                       VerticalAlignment="Center" FontSize="12" />
-                        </HyperlinkButton>
-                    </Border>
-                    <Button Grid.Column="1" Margin="8,0,0,0" Content="{Binding L.Browse}"
-                            Command="{Binding BrowseInstallDirectoryCommand}" />
-                </Grid>
+        <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,18,0,0" />
+
+        <!-- 安装位置 -->
+        <Grid Margin="0,18,0,0" ColumnDefinitions="130,*">
+            <TextBlock Grid.Column="0" Classes="section" Text="{Binding L.InstallFolderLabel}"
+                       VerticalAlignment="Top" Margin="0,8,0,0" />
+            <StackPanel Grid.Column="1" Spacing="8">
+                <Button Classes="link" Padding="0" HorizontalAlignment="Left"
+                        Command="{Binding BrowseInstallDirectoryCommand}"
+                        ToolTip.Tip="{Binding L.BrowseLabel}">
+                    <TextBlock Text="{Binding InstallDirectory}" TextTrimming="CharacterEllipsis"
+                               FontSize="13" Foreground="{DynamicResource AccentTextBrush}" />
+                </Button>
                 <TextBlock Classes="muted" Text="{Binding L.InstallFolderHint}" TextWrapping="Wrap" />
             </StackPanel>
-        </Border>
+        </Grid>
 
-        <Border Classes="card">
-            <StackPanel Spacing="6">
-                <TextBlock Classes="h2" Text="{Binding L.DeletePolicyLabel}" />
-                <ComboBox SelectedIndex="{Binding DeletePolicyIndex}" HorizontalAlignment="Stretch">
+        <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,18,0,0" />
+
+        <!-- 安装包处理 -->
+        <Grid Margin="0,18,0,0" ColumnDefinitions="130,*">
+            <TextBlock Grid.Column="0" Classes="section" Text="{Binding L.DeletePolicyLabel}"
+                       VerticalAlignment="Top" Margin="0,8,0,0" />
+            <StackPanel Grid.Column="1" Spacing="8">
+                <ComboBox SelectedIndex="{Binding DeletePolicyIndex}"
+                          HorizontalAlignment="Stretch">
                     <ComboBoxItem Content="{Binding L.DeletePolicyKeep}" />
                     <ComboBoxItem Content="{Binding L.DeletePolicyImmediate}" />
                 </ComboBox>
                 <TextBlock Classes="muted" Text="{Binding L.DeletePolicyHint}" TextWrapping="Wrap" />
             </StackPanel>
-        </Border>
-
-        <Grid ColumnDefinitions="*,Auto">
-            <HyperlinkButton Grid.Column="0" Padding="0" VerticalAlignment="Center"
-                             Content="{Binding L.AboutLabel}" Click="About_Click" />
-            <Button Grid.Column="1" Classes="primary" Content="{Binding L.Done}" MinWidth="90"
-                    HorizontalContentAlignment="Center" Click="Done_Click" />
         </Grid>
+
+
     </StackPanel>
 </Window>

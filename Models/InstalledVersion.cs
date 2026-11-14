@@ -23,4 +23,7 @@ public sealed class InstalledVersion
 
     [JsonIgnore]
     public string InstalledAtText => InstalledAt.ToString("yyyy-MM-dd HH:mm");
+
+    [JsonIgnore]
+    public string DetailText => $"{TypeText} · {InstalledAtText}";
 }

@@ -1,59 +1,127 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="GodotManager.App"
-             RequestedThemeVariant="Default">
+             RequestedThemeVariant="Light">
     <Application.Resources>
         <ResourceDictionary>
-            <!-- Godot 蓝主配色：覆盖 Fluent 主题的系统强调色 -->
-            <Color x:Key="SystemAccentColor">#FF478CBF</Color>
-            <SolidColorBrush x:Key="BrandBrush" Color="#FF3F81BA" />
-            <SolidColorBrush x:Key="BrandHoverBrush" Color="#FF346C9E" />
-            <SolidColorBrush x:Key="BrandSurfaceBrush" Color="#14478CBF" />
-            <SolidColorBrush x:Key="BrandBorderBrush" Color="#40478CBF" />
-            <SolidColorBrush x:Key="BrandPanelBrush" Color="#0D478CBF" />
-            <SolidColorBrush x:Key="ListItemHoverBrush" Color="#10478CBF" />
-            <SolidColorBrush x:Key="ListItemSelectedBrush" Color="#24478CBF" />
-            <SolidColorBrush x:Key="ListItemSelectedHoverBrush" Color="#30478CBF" />
+            <!-- 浅色为默认配色，深色由 App.ApplyTheme 在运行时改写这些画刷 -->
+            <Color x:Key="SystemAccentColor">#FF4B6EC6</Color>
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F6FC" />
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="SidePanelBrush" Color="#F5F8FE" />
+            <SolidColorBrush x:Key="SubtleBrush" Color="#F2F5FA" />
+            <SolidColorBrush x:Key="HoverBrush" Color="#F7F9FE" />
+            <SolidColorBrush x:Key="SelectedBrush" Color="#EAF1FE" />
+            <SolidColorBrush x:Key="SelectedHoverBrush" Color="#E3ECFD" />
+            <SolidColorBrush x:Key="DividerBrush" Color="#EDF0F6" />
+            <SolidColorBrush x:Key="TextBrush" Color="#1F2735" />
+            <SolidColorBrush x:Key="MutedTextBrush" Color="#78859A" />
+            <SolidColorBrush x:Key="AccentBrush" Color="#4B6EC6" />
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#3E5FB2" />
+            <SolidColorBrush x:Key="AccentTextBrush" Color="#3562C8" />
+            <SolidColorBrush x:Key="AccentSoftBrush" Color="#E7EEFC" />
+            <SolidColorBrush x:Key="AccentBorderBrush" Color="#DAE4F8" />
         </ResourceDictionary>
     </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
 
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
         <Style Selector="TextBlock.h2">
             <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         </Style>
         <Style Selector="TextBlock.muted">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="TextBlock.version">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.tag">
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
         </Style>
 
+        <!-- 卡片 / 内嵌面板 -->
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="{DynamicResource BrandSurfaceBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="14" />
-            <Setter Property="BoxShadow" Value="0 2 10 0 #20000000" />
+            <Setter Property="BoxShadow" Value="0 3 14 0 #140F1B33" />
         </Style>
         <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource BrandPanelBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Border.searchBox">
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Height" Value="36" />
         </Style>
 
-        <!-- 列表项：hover / 选中与其它控件统一 6px 圆角，间距由 Padding 统一控制 -->
+        <!-- 搜索框：去掉 Fluent 自带边框，只保留占位文字与输入 -->
+        <Style Selector="TextBox.search">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+        <Style Selector="TextBox.search /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+
+        <Style Selector="ToggleSwitch.switch">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="OnContent" Value="{x:Null}" />
+            <Setter Property="OffContent" Value="{x:Null}" />
+        </Style>
+
+        <Style Selector="ProgressBar">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+        </Style>
+
+
+        <!-- 分段按钮用圆角；版本列表为直角行，带分隔线与左侧选中竖条 -->
         <Style Selector="ListBoxItem">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Margin" Value="2,1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Margin" Value="0" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border Name="ItemRoot" CornerRadius="6"
+                    <Border Name="ItemRoot" CornerRadius="8"
                             Background="{TemplateBinding Background}"
                             Padding="{TemplateBinding Padding}">
                         <ContentPresenter Name="ItemContent"
@@ -65,52 +133,166 @@
                 </ControlTemplate>
             </Setter>
         </Style>
-        <Style Selector="ListBox.tabs ListBoxItem">
-            <Setter Property="Padding" Value="4,12" />
-        </Style>
         <Style Selector="ListBoxItem:pointerover">
-            <Setter Property="Background" Value="{DynamicResource ListItemHoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
         </Style>
         <Style Selector="ListBoxItem:selected">
-            <Setter Property="Background" Value="{DynamicResource ListItemSelectedBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource BrandBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
         </Style>
         <Style Selector="ListBoxItem:selected:pointerover">
-            <Setter Property="Background" Value="{DynamicResource ListItemSelectedHoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SelectedHoverBrush}" />
+        </Style>
+        <Style Selector="ListBox.release ListBoxItem, ListBox.installed ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="ItemRoot" CornerRadius="0"
+                            Background="{TemplateBinding Background}">
+                        <Grid ColumnDefinitions="3,*">
+                            <Border Name="SelectionBar" Width="3" CornerRadius="0"
+                                    Background="Transparent" />
+                            <ContentPresenter Grid.Column="1" Name="ItemContent" Margin="13,0,13,0"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.release ListBoxItem">
+            <Setter Property="MinHeight" Value="52" />
+        </Style>
+        <Style Selector="ListBox.release ListBoxItem /template/ Border#ItemRoot">
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style Selector="ListBox.installed ListBoxItem">
+            <Setter Property="MinHeight" Value="60" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ Border#SelectionBar">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
         </Style>
 
+        <!-- 顶部主版本分段按钮 -->
+        <Style Selector="ListBox.segments">
+            <Setter Property="ItemsPanel">
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                </ItemsPanelTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.segments ListBoxItem">
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="ListBox.segments ListBoxItem:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+        </Style>
+        <Style Selector="ListBox.segments ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+        </Style>
+        <Style Selector="ListBox.segments ListBoxItem:selected /template/ Border#ItemRoot">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+        </Style>
+
+        <!-- 版本类型菜单：保留原生内边距与勾选图标，宽度与按钮接近 -->
+        <Style Selector="MenuFlyoutPresenter">
+            <Setter Property="MinWidth" Value="220" />
+        </Style>
+
+
+        <!-- 按钮 -->
         <Style Selector="Button">
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Opacity" Value="0.45" />
         </Style>
         <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{DynamicResource BrandBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="Padding" Value="14,9" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource BrandHoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
         </Style>
         <Style Selector="Button.primary:pressed">
-            <Setter Property="Background" Value="{DynamicResource BrandHoverBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+        </Style>
+        <Style Selector="Button.soft">
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.soft:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentBorderBrush}" />
+        </Style>
+        <Style Selector="Button.subtle">
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.subtle:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         </Style>
         <Style Selector="Button.icon">
-            <Setter Property="Background" Value="{DynamicResource BrandSurfaceBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{DynamicResource BrandBorderBrush}" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.icon:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+        </Style>
+        <Style Selector="Button.filter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="Button.filter:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />
+        </Style>
+        <Style Selector="Button.link:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
         </Style>
 
-        <!-- 版本列表项操作区：hover 时才可见可点，但始终占位，避免行高/列宽变化引起抖动 -->
+        <!-- 版本行内的新闻按钮：hover 时才出现，但始终占位避免行跳动 -->
         <Style Selector="Button.rowAction">
             <Setter Property="Opacity" Value="0" />
             <Setter Property="IsHitTestVisible" Value="False" />
-            <Setter Property="Padding" Value="8,3" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="CornerRadius" Value="4" />
-            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="ListBoxItem:pointerover Button.rowAction">
             <Setter Property="Opacity" Value="1" />

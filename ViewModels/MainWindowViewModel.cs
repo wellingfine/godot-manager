@@ -34,6 +34,26 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasNoInstalled => Installed.Count == 0;
     public string FilteredCountText => L.F("FilteredCount", FilteredReleases.Count);
+    public string InstalledCountText => L.F("InstalledCount", Installed.Count);
+
+    public string ChannelSummaryText
+    {
+        get
+        {
+            var names = new List<string>();
+            if (ShowStable) names.Add("Stable");
+            if (ShowRc) names.Add("RC");
+            if (ShowBeta) names.Add("Beta");
+            if (ShowDev) names.Add("Dev");
+            if (ShowAlpha) names.Add("Alpha");
+            var summary = names.Count == 0 ? L.T("ChannelNone") : string.Join(" / ", names);
+            return $"{L.T("ChannelLabel")} · {summary}";
+        }
+    }
+
+    public string SelectedSummaryText => SelectedRelease is null
+        ? L.T("NoSelection")
+        : L.F("SelectedItem", SelectedRelease.Id, UseMono ? ".NET" : L.T("TypeStandard"));
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showStable = true;
@@ -51,6 +71,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _progressText = string.Empty;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private bool _isDarkTheme;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
@@ -70,6 +91,8 @@ public partial class MainWindowViewModel : ObservableObject
         _confirm = confirm;
 
         L.SetLanguage(_stateService.State.Language);
+        _isDarkTheme = _stateService.State.Theme == "dark";
+        App.ApplyTheme(_isDarkTheme);
         InstallDirectory = _stateService.State.InstallDirectory;
         _deleteArchiveAfterInstall = _stateService.State.DeleteArchiveAfterInstall;
         _deletePolicyIndex = _deleteArchiveAfterInstall ? 1 : 0;
@@ -93,7 +116,11 @@ public partial class MainWindowViewModel : ObservableObject
             _selectedMajor = MajorGroups[0];
         }
 
-        Installed.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasNoInstalled));
+        Installed.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HasNoInstalled));
+            OnPropertyChanged(nameof(InstalledCountText));
+        };
         FilteredReleases.CollectionChanged += (_, _) => OnPropertyChanged(nameof(FilteredCountText));
         L.LanguageChanged += OnLanguageChanged;
 
@@ -108,11 +135,17 @@ public partial class MainWindowViewModel : ObservableObject
     {
         RebuildMajorGroups();
         OnPropertyChanged(nameof(FilteredCountText));
+        OnPropertyChanged(nameof(InstalledCountText));
+        OnPropertyChanged(nameof(ChannelSummaryText));
+        OnPropertyChanged(nameof(SelectedSummaryText));
         RefreshInstalled();
         Status = L.T("StatusSettingsSaved");
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedReleaseChanged(GodotRelease? value) =>
+        OnPropertyChanged(nameof(SelectedSummaryText));
 
     partial void OnUseMonoChanged(bool value)
     {
@@ -124,8 +157,19 @@ public partial class MainWindowViewModel : ObservableObject
             release.ShowDotNetTag = value;
         }
 
+        OnPropertyChanged(nameof(SelectedSummaryText));
         ApplyFilter();
     }
+
+    partial void OnIsDarkThemeChanged(bool value)
+    {
+        _stateService.State.Theme = value ? "dark" : "light";
+        _stateService.Save();
+        App.ApplyTheme(value);
+    }
+
+    [RelayCommand]
+    private void ToggleTheme() => IsDarkTheme = !IsDarkTheme;
 
     partial void OnLanguageIndexChanged(int value)
     {
@@ -157,6 +201,7 @@ public partial class MainWindowViewModel : ObservableObject
         _stateService.State.ShowDev = ShowDev;
         _stateService.State.ShowAlpha = ShowAlpha;
         _stateService.Save();
+        OnPropertyChanged(nameof(ChannelSummaryText));
         ApplyFilter();
     }
 
@@ -184,6 +229,16 @@ public partial class MainWindowViewModel : ObservableObject
                      (keyword.Length == 0 || release.Id.Contains(keyword, StringComparison.OrdinalIgnoreCase))))
         {
             FilteredReleases.Add(release);
+        }
+
+        // 保持列表始终有一个选中项，底部「已选」与下载按钮在打开后即可用。
+        if (FilteredReleases.Count == 0)
+        {
+            SelectedRelease = null;
+        }
+        else if (SelectedRelease is null || !FilteredReleases.Contains(SelectedRelease))
+        {
+            SelectedRelease = FilteredReleases[0];
         }
     }
 
@@ -253,6 +308,16 @@ public partial class MainWindowViewModel : ObservableObject
             Installed.Add(record);
         }
 
+        // 已安装列表同样保持默认选中，启动按钮打开界面后即可对应最新版本。
+        if (Installed.Count == 0)
+        {
+            SelectedInstalled = null;
+        }
+        else if (SelectedInstalled is null || !Installed.Contains(SelectedInstalled))
+        {
+            SelectedInstalled = Installed[0];
+        }
+
         _stateService.Save();
     }
 
@@ -282,7 +347,9 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        if (TryLoadFromCache(out var cached, out var cachedAt))
+        // 旧版本生成的缓存没有公告链接，直接联网重抓一次把它升级；联网失败时仍会回退到旧缓存。
+        if (TryLoadFromCache(out var cached, out var cachedAt) &&
+            cached.Any(release => !string.IsNullOrEmpty(release.NewsUrl)))
         {
             SetReleases(cached);
             Status = L.F("StatusCached", cached.Count, cachedAt) + AppendCleanupStatus();
