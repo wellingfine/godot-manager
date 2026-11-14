@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GodotManager.ViewModels"
+        x:Class="GodotManager.AboutWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding L.AboutTitle}"
+        Width="420"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="14">
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="44" Height="44" CornerRadius="10" Background="{DynamicResource BrandBrush}">
+                        <TextBlock Text="G" FontSize="24" FontWeight="Bold" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Classes="h2" Text="{Binding L.AppTitle}" />
+                        <TextBlock x:Name="VersionTextBlock" Classes="muted" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Classes="muted" Text="{Binding L.AboutDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="80,*">
+                    <TextBlock Grid.Column="0" Classes="muted" Text="{Binding L.AboutAuthor}"
+                               VerticalAlignment="Center" />
+                    <TextBlock x:Name="AuthorTextBlock" Grid.Column="1" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </Grid>
+                <Grid ColumnDefinitions="80,*">
+                    <TextBlock Grid.Column="0" Classes="muted" Text="{Binding L.AboutProject}"
+                               VerticalAlignment="Center" />
+                    <HyperlinkButton x:Name="ProjectLink" Grid.Column="1" Padding="0"
+                                     HorizontalAlignment="Left" VerticalAlignment="Center"
+                                     Click="ProjectLink_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Button Classes="primary" Content="{Binding L.Done}" HorizontalAlignment="Right" MinWidth="90"
+                HorizontalContentAlignment="Center" Click="Done_Click" />
+    </StackPanel>
+</Window>

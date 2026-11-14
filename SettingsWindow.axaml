@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GodotManager.ViewModels"
+        x:Class="GodotManager.SettingsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding L.SettingsTitle}"
+        Width="480"
+        SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="14">
+        <Border Classes="card">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="h2" Text="{Binding L.LanguageLabel}" />
+                <ComboBox SelectedIndex="{Binding LanguageIndex}" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="中文" />
+                    <ComboBoxItem Content="English" />
+                </ComboBox>
+                <TextBlock Classes="muted" Text="{Binding L.LanguageHint}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="h2" Text="{Binding L.InstallFolderLabel}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <Border Grid.Column="0" Classes="panel" Padding="8,6" MinHeight="32">
+                        <HyperlinkButton Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                                         Command="{Binding OpenInstallDirectoryCommand}"
+                                         ToolTip.Tip="{Binding L.OpenFolderTooltip}">
+                            <TextBlock Text="{Binding InstallDirectory}" TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center" FontSize="12" />
+                        </HyperlinkButton>
+                    </Border>
+                    <Button Grid.Column="1" Margin="8,0,0,0" Content="{Binding L.Browse}"
+                            Command="{Binding BrowseInstallDirectoryCommand}" />
+                </Grid>
+                <TextBlock Classes="muted" Text="{Binding L.InstallFolderHint}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="h2" Text="{Binding L.DeletePolicyLabel}" />
+                <ComboBox SelectedIndex="{Binding DeletePolicyIndex}" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="{Binding L.DeletePolicyKeep}" />
+                    <ComboBoxItem Content="{Binding L.DeletePolicyImmediate}" />
+                </ComboBox>
+                <TextBlock Classes="muted" Text="{Binding L.DeletePolicyHint}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <HyperlinkButton Grid.Column="0" Padding="0" VerticalAlignment="Center"
+                             Content="{Binding L.AboutLabel}" Click="About_Click" />
+            <Button Grid.Column="1" Classes="primary" Content="{Binding L.Done}" MinWidth="90"
+                    HorizontalContentAlignment="Center" Click="Done_Click" />
+        </Grid>
+    </StackPanel>
+</Window>
