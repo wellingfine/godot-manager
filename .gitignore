@@ -1,6 +1,8 @@
 # 构建输出
 [Bb]in/
 [Oo]bj/
+dist/
+Tools/Setup/Payload.zip
 [Dd]ebug/
 [Rr]elease/
 x64/

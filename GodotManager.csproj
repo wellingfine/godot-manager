@@ -10,6 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 安装器是独立项目，不参与主工程的编译 -->
+    <Compile Remove="Tools\**" />
+    <None Remove="Tools\**" />
+    <EmbeddedResource Remove="Tools\**" />
+    <AvaloniaResource Remove="Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 界面内展示的图标（关于 / 设置窗口） -->
     <AvaloniaResource Include="Assets\Icon.png" />
   </ItemGroup>

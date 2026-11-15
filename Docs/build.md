@@ -55,16 +55,18 @@ magick Icon.svg -background none -define icon:auto-resize=256,128,64,48,32,24,16
 
 ## 发布
 
+所有发布产物统一放在 `dist/`。
+
 生成可分发的目录（框架依赖，需目标机器有 .NET 10 运行时）：
 
 ```bash
-dotnet publish -c Release -o bin/publish
+dotnet publish -c Release -o dist/GodotManager-0.2.0
 ```
 
 生成 Windows x64 自包含单文件（无需目标机器装运行时，体积较大）：
 
 ```bash
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o bin/publish-win
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/GodotManager-0.2.0-win-x64
 ```
 
 实测产物：`GodotManager.exe` 约 85 MB，但 Avalonia 的原生依赖（`libSkiaSharp.dll`、`libHarfBuzzSharp.dll`、`av_libglesv2.dll` 等）**不会**被打进单文件，需要整个目录一起分发，不能只拷贝 exe。
@@ -73,25 +75,71 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 - 上面的 `dotnet build -c Release` 与两条 `publish` 命令均在项目上验证通过；若加了 `-p:PublishTrimmed=true` 或 NativeAOT，需重新验证 Avalonia 的 XAML / 反射加载是否正常，本项目未启用裁剪。
 - 发布产物不包含 `state.json` 和任何 Godot 版本文件；用户首次运行才会在 `%LOCALAPPDATA%\GodotManager\` 下创建配置。
-- `bin/`、`obj/`、`publish/` 均被 `.gitignore` 忽略，不要提交构建产物。
+- `bin/`、`obj/`、`dist/` 均被 `.gitignore` 忽略，不要提交构建产物。
 
 ## 打包一个可分发版本
 
 先发布，再压缩成单个 zip（排除 `.pdb` 可显著减小体积）：
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o bin/publish-win
-$files = Get-ChildItem -LiteralPath bin/publish-win -File | Where-Object { $_.Extension -ne '.pdb' } | ForEach-Object { $_.FullName }
-Compress-Archive -Path $files -DestinationPath bin/GodotManager-win-x64.zip -Force
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/GodotManager-0.2.0-win-x64
+$files = Get-ChildItem -LiteralPath dist/GodotManager-0.2.0-win-x64 -File | Where-Object { $_.Extension -ne '.pdb' } | ForEach-Object { $_.FullName }
+Compress-Archive -Path $files -DestinationPath dist/GodotManager-0.2.0-win-x64.zip -Force
 ```
 
-产物是 `bin/GodotManager-win-x64.zip`：解压后**整目录分发**（主 exe + 原生 DLL），不要把 exe 单独拷出去。目标机器无需安装 .NET 运行时。
+产物是 `dist/GodotManager-0.2.0-win-x64.zip`：解压后**整目录分发**（主 exe + 原生 DLL），不要把 exe 单独拷出去。目标机器无需安装 .NET 运行时。
+
+## 一键打包脚本
+
+`Scripts/` 下提供了两个脚本，把上面「发布 + 压缩」合成一步：
+
+| 脚本 | 适用系统 | 运行方式 |
+| --- | --- | --- |
+| `Scripts/package.bat` | Windows | `Scripts\package.bat`（或在 cmd 里执行） |
+| `Scripts/package.sh` | macOS / Linux | `bash Scripts/package.sh`（首次可先 `chmod +x Scripts/package.sh`） |
+
+参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `-r <rid>` | 运行时标识，默认 `win-x64`（bat）/ 按当前系统自动选择（sh）；可填 `win-arm64` / `linux-x64` / `osx-arm64` 等 |
+| `-v <版本>` | 版本号，默认读取 `GodotManager.csproj` 的 `<Version>` |
+| `-o <目录>` | 输出目录，默认 `dist/` |
+| `-f` | 框架依赖发布（目标机器需自行安装 .NET 10 运行时，体积更小） |
+| `--no-zip` | 只发布，不压缩 |
+| `--no-clean` | 不清空旧的发布目录 |
+| `--setup` | 额外生成 Windows 自解压安装包（`dist/GodotManager-<版本>-win-x64-setup.exe`） |
+| `-h` | 查看帮助 |
+
+产物（都在 `dist/` 下）：
+
+- `dist/GodotManager-<版本>-<rid>/`：发布目录（`GodotManager.exe` + `libSkiaSharp.dll` 等原生依赖 + `README.md`）；
+- `dist/GodotManager-<版本>-<rid>.zip`：可直接分发的压缩包（整目录打包，别只拷 exe）；
+- `dist/GodotManager-<版本>-win-x64-setup.exe`：单文件自解压安装包（`--setup`）。
+
+脚本会删掉运行时包自带的 `.pdb`（体积很大），实测压缩包约 44 MB。`dist/` 已被 `.gitignore` 忽略。
+
+## Windows 安装包
+
+`Scripts/package.bat --setup` 会额外产出一个**单文件自解压安装包**：安装载荷被压成 `Tools/Setup/Payload.zip`，再由 `Tools/Setup` 这个独立的小项目（自包含、裁剪过的 .NET 程序）打包进 `setup.exe`。
+
+用户双击 `setup.exe` 后：
+
+1. 自动解压到 `%LOCALAPPDATA%\GodotManager\app\`；
+2. 调用载荷里的 `Scripts/install.ps1`：创建开始菜单与桌面快捷方式、注册「应用和功能」里的卸载项、生成 `%LOCALAPPDATA%\GodotManager\uninstall.cmd`；
+3. 自动启动程序。
+
+卸载：开始菜单里的「卸载 Godot 版本管理器」，或「应用和功能 → 卸载」，或直接运行 `%LOCALAPPDATA%\GodotManager\uninstall.cmd`。卸载只删除程序文件与快捷方式，**用户配置（`state.json`、已下载版本）保留在 `%LOCALAPPDATA%\GodotManager\`**。
+
+安装路径是每用户目录（不需要管理员权限）；`Tools/Setup/Program.cs` 里改 `$baseDir` / `$targetDir` 可以换成 `Program Files` 之类的全局路径。
+
+> 注意：`Tools/Setup/Payload.zip` 是打包时生成的中间产物，已被 `.gitignore` 忽略；单独 `dotnet build Tools/Setup` 需要先有该文件。
 
 ## 跨平台构建
 
 ```bash
-dotnet publish -c Release -r osx-arm64 --self-contained true -o bin/publish-osx-arm64
-dotnet publish -c Release -r linux-x64 --self-contained true -o bin/publish-linux-x64
+dotnet publish -c Release -r osx-arm64 --self-contained true -o dist/GodotManager-0.2.0-osx-arm64
+dotnet publish -c Release -r linux-x64 --self-contained true -o dist/GodotManager-0.2.0-linux-x64
 ```
 
 `UsePlatformDetect()` 让 Avalonia UI 可以在 macOS / Linux 启动，但**功能仍是 Windows 专用**（下载参数、exe 扫描、启动方式），上述命令只解决「能跑起来」。另外 `WinExe` + Windows 清单不会产生正规的 macOS `.app` bundle，正式分发需要额外打包步骤。改造点见 [architecture.md](architecture.md#平台支持现状)。

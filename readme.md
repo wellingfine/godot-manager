@@ -40,6 +40,8 @@ dotnet run
 
 或构建后运行 `bin/Debug/net10.0/GodotManager.exe`。
 
+打包发行版：`Scripts\package.bat`（Windows）或 `bash Scripts/package.sh`（macOS / Linux），产物在 `dist/`；加 `--setup` 生成单文件自解压安装包，详见 [构建与发布](Docs/build.md#一键打包脚本)。
+
 ## 说明
 
 - 下载直链使用官网提供的 `downloads.godotengine.org`，会重定向到官方对象存储，需要联网
