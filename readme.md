@@ -2,6 +2,8 @@
 
 使用 Avalonia UI 的 Godot Engine 版本管理小工具：从官方归档页解析版本列表，一键下载解压到指定目录，需要时直接启动对应版本。
 
+![主界面](Docs/images/main-window.png)
+
 ## 功能
 
 - 启动后自动解析 https://godotengine.org/download/archive/ 的全部发布版本，显示版本号、发布类型与日期；悬停版本行可直接打开该版本的发布公告（News）

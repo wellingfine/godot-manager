@@ -125,13 +125,13 @@ Compress-Archive -Path $files -DestinationPath dist/GodotManager-0.2.0-win-x64.z
 
 用户双击 `setup.exe` 后：
 
-1. 自动解压到 `%LOCALAPPDATA%\GodotManager\app\`；
-2. 调用载荷里的 `Scripts/install.ps1`：创建开始菜单与桌面快捷方式、注册「应用和功能」里的卸载项、生成 `%LOCALAPPDATA%\GodotManager\uninstall.cmd`；
+1. 把载荷解压到临时目录，并运行其中的 `Scripts/install.ps1`；
+2. 脚本弹出「选择安装位置」对话框（默认 `%LOCALAPPDATA%\Programs\GodotManager`），把程序装到所选父目录下的 `GodotManager` 文件夹，并创建开始菜单 / 桌面（会询问）快捷方式、注册「应用和功能」卸载项、生成 `%LOCALAPPDATA%\GodotManager\uninstall.cmd`；
 3. 自动启动程序。
 
 卸载：开始菜单里的「卸载 Godot 版本管理器」，或「应用和功能 → 卸载」，或直接运行 `%LOCALAPPDATA%\GodotManager\uninstall.cmd`。卸载只删除程序文件与快捷方式，**用户配置（`state.json`、已下载版本）保留在 `%LOCALAPPDATA%\GodotManager\`**。
 
-安装路径是每用户目录（不需要管理员权限）；`Tools/Setup/Program.cs` 里改 `$baseDir` / `$targetDir` 可以换成 `Program Files` 之类的全局路径。
+安装路径是每用户目录（不需要管理员权限）；默认装到 `%LOCALAPPDATA%\Programs\GodotManager`，也可在对话框里改到任意位置（例如 `D:\software\GodotManager`）。
 
 > 注意：`Tools/Setup/Payload.zip` 是打包时生成的中间产物，已被 `.gitignore` 忽略；单独 `dotnet build Tools/Setup` 需要先有该文件。
 
