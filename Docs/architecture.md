@@ -86,7 +86,7 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 
 1. **启动**：`Program.Main` → `App` → `MainWindow` 构造 VM → VM 构造时读取 `state.json`、清理过期安装包、扫描安装目录并写入记录 → `LoadReleasesAsync()` 先读 `releases-cache.json`，缓存有效（默认 2 天内）则直接加载，否则联网拉取。
 2. **在线列表 / 刷新**：联网时 `FetchAsync()` 拿 HTML → `Parse()` 得到 `GodotRelease` 列表 → **成功后写入缓存** → `SetReleases()` 重建 tab 并筛选 → `FilteredReleases` 绑定 ListBox。点刷新图标会强制联网；若距上次「刷新触发的联网」不足 30 秒，则不发请求，直接从本地缓存重新解析。联网失败时回退到本地缓存（忽略过期），保证列表可用。
-3. **下载安装**：`BuildDownloadUrl()` → `DownloadAsync()` 写入 `<安装目录>\downloads\*.zip` → `Install()` 解压到 `<安装目录>\<版本Id>[-mono]\` 并定位主 exe → 追加 `InstalledVersion` 记录并保存 → 按设置窗口里的安装包策略决定是否删除 zip（默认保留 30 天；取消或失败始终删除残缺文件）。
+3. **下载安装**：`BuildDownloadUrl()` → `DownloadAsync()` 写入 `<安装目录>\downloads\*.zip` → `Install()` 以包内主 exe 名（如 `Godot_v4.4.1-stable_mono_win64`）作为版本目录名，剥掉官方包自带的同名外层目录后解压并定位主 exe → 追加 `InstalledVersion` 记录并保存 → 按设置窗口里的安装包策略决定是否删除 zip（默认保留 30 天；取消或失败始终删除残缺文件）。
 4. **扫描已有版本**：遍历安装目录的一级子目录（跳过 `downloads`），找匹配 `Godot_v{版本}-{类型}[_mono]_win(32|64).exe` 的主程序（忽略 `_console.exe`）；根目录直接放的 exe 也识别。按 exe 路径去重，UI 只显示位于当前安装目录下的记录。
 5. **启动 / 卸载**：`Process.Start` 直接启动记录的 exe；卸载删除版本目录（若 exe 就在安装目录根下，则只删该 exe，避免删掉整个安装目录）。
 6. **临时文件清理**：启动时以及切换安装目录时，删除 `downloads` 内修改时间超过 `TempFileRetentionDays`（默认 30 天）的 `.zip` / `.part`；安装目录根目录下的旧 zip 不动。

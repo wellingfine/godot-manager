@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- 程序图标（exe 图标 + Avalonia 默认窗口图标），源文件为 Icon.svg 导出的多尺寸 ico -->
     <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>

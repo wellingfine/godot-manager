@@ -29,14 +29,19 @@ public static class InstallService
 
     public static InstalledVersion Install(string zipPath, GodotRelease release, bool mono, string installRoot)
     {
-        var directory = Path.Combine(installRoot, Sanitize(release.Id) + (mono ? "-mono" : ""));
+        using var archive = ZipFile.OpenRead(zipPath);
+        var main = FindMainExecutable(archive.Entries, mono)
+            ?? throw new InvalidOperationException("压缩包中未找到 Godot 可执行文件。");
+
+        // 目录名沿用官方包命名（如 Godot_v4.4.1-stable_mono_win64），不再自己拼版本号。
+        var directory = Path.Combine(installRoot, Sanitize(Path.GetFileNameWithoutExtension(main.Name)));
         if (Directory.Exists(directory))
         {
             Directory.Delete(directory, true);
         }
 
         Directory.CreateDirectory(directory);
-        ZipFile.ExtractToDirectory(zipPath, directory, overwriteFiles: true);
+        ExtractFlattened(archive, directory, main);
 
         var executable = FindExecutable(directory, mono)
             ?? throw new InvalidOperationException("压缩包中未找到 Godot 可执行文件。");
@@ -223,6 +228,64 @@ public static class InstallService
                 .ThenBy(path => path.Length)
                 .FirstOrDefault()
             ?? files.OrderBy(path => path.Length).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// 官方包结构不统一：.NET 包通常带一层同名目录（如 Godot_v4.4.1-stable_mono_win64/），标准版则直接放 exe。
+    /// 以主 exe 所在目录为基准剥掉这层包装，让 exe 与 GodotSharp 直接落在官方命名的版本目录下；
+    /// 包内其它根级条目（README 等）仍按原路径保留。
+    /// </summary>
+    private static void ExtractFlattened(ZipArchive archive, string destination, ZipArchiveEntry main)
+    {
+        var root = Path.GetFullPath(destination).TrimEnd(
+            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var name = main.FullName.Replace('\\', '/');
+        var slash = name.LastIndexOf('/');
+        var prefix = slash < 0 || name.StartsWith('/') ||
+                     name.Split('/').Any(part => part is "." or "..")
+            ? null
+            : name[..(slash + 1)];
+
+        foreach (var entry in archive.Entries)
+        {
+            var relative = entry.FullName.Replace('\\', '/');
+            if (prefix is not null && relative.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                relative = relative[prefix.Length..];
+            }
+
+            // 目录项按文件自动创建；异常路径（绝对路径、..、盘符）一律跳过，避免写出目标目录。
+            if (entry.Name.Length == 0 || relative.Length == 0 || relative.EndsWith('/') ||
+                relative.Split('/').Any(part => part.Length == 0 || part is "." or ".." || part.Contains(':')))
+            {
+                continue;
+            }
+
+            var target = Path.GetFullPath(Path.Combine(destination,
+                relative.Replace('/', Path.DirectorySeparatorChar)));
+            if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            entry.ExtractToFile(target, overwrite: true);
+        }
+    }
+
+    /// <summary>
+    /// 在压缩包中定位主 exe（忽略 _console.exe），用于确定官方目录名与需要剥掉的包装目录。
+    /// </summary>
+    private static ZipArchiveEntry? FindMainExecutable(IReadOnlyList<ZipArchiveEntry> entries, bool mono)
+    {
+        var executables = entries
+            .Where(entry => entry.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                            !entry.Name.Contains("console", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return executables
+            .FirstOrDefault(entry => entry.Name.Contains("mono", StringComparison.OrdinalIgnoreCase) == mono)
+            ?? executables.FirstOrDefault();
     }
 
     private static string Sanitize(string value)

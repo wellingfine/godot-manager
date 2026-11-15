@@ -47,7 +47,7 @@ dotnet run
 ## 说明
 
 - 下载直链使用官网提供的 `downloads.godotengine.org`，会重定向到官方对象存储，需要联网
-- 默认安装目录为 `%LOCALAPPDATA%\GodotManager\versions`，每个版本解压到独立子目录
+- 默认安装目录为 `%LOCALAPPDATA%\GodotManager\versions`，每个版本解压到独立子目录，目录名沿用官方包名（如 `Godot_v4.4.1-stable_mono_win64`），包内自带的同名外层目录会被剥掉
 - 扫描识别官方命名的 `Godot_v{版本}-{类型}[_mono]_win64.exe`（忽略 `_console.exe`），直接放在安装目录根下的 exe 也能识别
 - 卸载会删除该版本的解压目录；若 exe 直接放在安装目录根下，则只删除该 exe，不会删掉整个安装目录
 - 过期清理只处理 `downloads` 子目录内的 `.zip` / `.part`，安装目录里的其它文件（包括根目录下已有的 zip）不受影响
