@@ -69,8 +69,6 @@ public sealed class LocalizationService : ObservableObject
     public string TabAll => T(nameof(TabAll));
     public string SettingsTitle => T(nameof(SettingsTitle));
     public string LanguageLabel => T(nameof(LanguageLabel));
-    public string LanguageZh => T(nameof(LanguageZh));
-    public string LanguageEn => T(nameof(LanguageEn));
     public string LanguageHint => T(nameof(LanguageHint));
     public string InstallFolderLabel => T(nameof(InstallFolderLabel));
     public string InstallFolderHint => T(nameof(InstallFolderHint));
@@ -120,8 +118,6 @@ public sealed class LocalizationService : ObservableObject
         ["TypeStandard"] = "标准版",
         ["SettingsTitle"] = "设置",
         ["LanguageLabel"] = "界面语言",
-        ["LanguageZh"] = "简体中文",
-        ["LanguageEn"] = "English",
         ["LanguageHint"] = "切换后立即生效，下次打开会记住你的选择。",
         ["InstallFolderLabel"] = "Godot 安装位置",
         ["InstallFolderHint"] = "已安装版本与新下载的版本都放在这里；启动时会扫描该目录。",
@@ -210,8 +206,6 @@ public sealed class LocalizationService : ObservableObject
         ["TypeStandard"] = "Standard",
         ["SettingsTitle"] = "Settings",
         ["LanguageLabel"] = "Display language",
-        ["LanguageZh"] = "Chinese",
-        ["LanguageEn"] = "English",
         ["LanguageHint"] = "Applies immediately and is remembered next time.",
         ["InstallFolderLabel"] = "Installation folder",
         ["InstallFolderHint"] = "Installed and newly downloaded versions live here. This folder is scanned on startup.",

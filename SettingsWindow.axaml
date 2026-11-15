@@ -17,10 +17,8 @@
                         HorizontalAlignment="Center" HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         ToolTip.Tip="{Binding L.AboutLabel}" Click="About_Click">
-                    <Border Width="46" Height="46" CornerRadius="12" Background="{DynamicResource AccentBrush}">
-                        <TextBlock Text="G" FontSize="24" FontWeight="Bold" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Image Source="/Assets/Icon.png" Width="46" Height="46" Stretch="Uniform"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Button>
                 <StackPanel Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center">
                     <TextBlock Classes="muted" Text="{Binding L.VersionLabel}" />
@@ -43,8 +41,9 @@
             <StackPanel Grid.Column="1" Spacing="8">
                 <ComboBox SelectedIndex="{Binding LanguageIndex}"
                           HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="{Binding L.LanguageZh}" />
-                    <ComboBoxItem Content="{Binding L.LanguageEn}" />
+                    <!-- 语言选项固定用语言自身的名称，不随界面语言变化，避免"Chinese"这类看不懂的写法 -->
+                    <ComboBoxItem Content="中文" />
+                    <ComboBoxItem Content="English" />
                 </ComboBox>
                 <TextBlock Classes="muted" Text="{Binding L.LanguageHint}" TextWrapping="Wrap" />
             </StackPanel>

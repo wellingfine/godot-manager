@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- 定义一个可复用的扁平风格 Godot 机器人头部图标 -->
+    <g id="godot-icon">
+      <!-- 头部外轮廓 (经典的齿轮/机器人轮廓) -->
+      <path d="M-24,-14 L-27,-22 L-19,-26 L-14,-19 L-6,-22 L-4,-30 L4,-30 L6,-22 L14,-19 L19,-26 L27,-22 L24,-14 C27,-9 28,-3 28,4 C28,19 16,28 0,28 C-16,28 -28,19 -28,4 C-28,-3 -27,-9 -24,-14 Z" fill="#478CBF" />
+      <!-- 脸部下半部分白色/浅灰装甲 -->
+      <path d="M-25,6 L-15,6 L-12,12 L-5,12 L-5,6 L5,6 L5,12 L12,12 L15,6 L25,6 C24,18 14,25 0,25 C-14,25 -24,18 -25,6 Z" fill="#FFFFFF" />
+      <!-- 嘴巴齿状线条 -->
+      <path d="M-16,16 L-10,16 L-8,20 L8,20 L10,16 L16,16" fill="none" stroke="#478CBF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 左眼白与眼珠 -->
+      <circle cx="-12" cy="-3" r="6.5" fill="#FFFFFF" />
+      <circle cx="-11" cy="-3" r="3.2" fill="#363D52" />
+      <!-- 右眼白与眼珠 -->
+      <circle cx="12" cy="-3" r="6.5" fill="#FFFFFF" />
+      <circle cx="11" cy="-3" r="3.2" fill="#363D52" />
+      <!-- 鼻梁竖线 -->
+      <rect x="-2" y="-7" width="4" height="9" rx="2" fill="#FFFFFF" />
+    </g>
+  </defs>
+
+  <!-- 1. 装饰性动态线条与粒子 (营造“蹦出”的动感) -->
+  <g stroke-linecap="round" fill="none">
+    <!-- 飞溅的线条 -->
+    <line x1="128" y1="36" x2="128" y2="18" stroke="#FFD166" stroke-width="5" />
+    <line x1="65" y1="68" x2="50" y2="54" stroke="#478CBF" stroke-width="5" />
+    <line x1="191" y1="68" x2="206" y2="54" stroke="#478CBF" stroke-width="5" />
+    <line x1="42" y1="115" x2="26" y2="110" stroke="#EF476F" stroke-width="4" />
+    <line x1="214" y1="115" x2="230" y2="110" stroke="#06D6A0" stroke-width="4" />
+    
+    <!-- 扁平几何小彩屑 -->
+    <circle cx="92" cy="34" r="4.5" fill="#EF476F" />
+    <circle cx="166" cy="36" r="5" fill="#06D6A0" />
+    <circle cx="44" cy="86" r="4" fill="#FFD166" />
+    <circle cx="212" cy="84" r="4.5" fill="#EF476F" />
+    <rect x="108" y="22" width="7" height="7" rx="1.5" fill="#478CBF" transform="rotate(25 111 25)" />
+    <rect x="145" y="20" width="7" height="7" rx="1.5" fill="#FFD166" transform="rotate(-15 148 23)" />
+  </g>
+
+  <!-- 2. 箱子内部暗面 (最底层) -->
+  <polygon points="62,146 194,146 184,126 72,126" fill="#8D5B34" />
+
+  <!-- 3. 蹦出来的多个 Godot 图标 (层次错落，大小和旋转角度不同) -->
+  <!-- 左后方小图标 -->
+  <use href="#godot-icon" transform="translate(74, 102) scale(0.58) rotate(-24)" />
+  <!-- 右后方小图标 -->
+  <use href="#godot-icon" transform="translate(182, 98) scale(0.62) rotate(22)" />
+  <!-- 顶部最高处飞出的图标 -->
+  <use href="#godot-icon" transform="translate(132, 56) scale(0.68) rotate(8)" />
+  <!-- 左前方主图标 -->
+  <use href="#godot-icon" transform="translate(96, 122) scale(0.85) rotate(-12)" />
+  <!-- 右前方主图标 -->
+  <use href="#godot-icon" transform="translate(158, 126) scale(0.82) rotate(14)" />
+
+  <!-- 4. 扁平风格纸箱 (位于前景，遮挡住底部图标的下半部分) -->
+  <g id="cardboard-box">
+    <!-- 左后侧翻开的箱盖 -->
+    <polygon points="72,126 52,110 42,130 62,146" fill="#C68958" />
+    <!-- 右后侧翻开的箱盖 -->
+    <polygon points="184,126 204,110 214,130 194,146" fill="#C68958" />
+
+    <!-- 箱子主体正面 -->
+    <rect x="62" y="146" width="132" height="86" rx="4" fill="#E0A370" />
+    
+    <!-- 箱子正面右侧阴影色块 (增加扁平几何立体感) -->
+    <path d="M168,146 L190,146 C192.2,146 194,147.8 194,150 L194,228 C194,230.2 192.2,232 190,232 L168,232 Z" fill="#D1925E" />
+
+    <!-- 箱子正面的装饰胶带/标签 -->
+    <rect x="120" y="146" width="16" height="32" fill="#F3C69F" opacity="0.7" />
+    <rect x="76" y="198" width="28" height="16" rx="2" fill="#FFF8F0" opacity="0.85" />
+    <line x1="81" y1="204" x2="99" y2="204" stroke="#B5794A" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="81" y1="209" x2="93" y2="209" stroke="#B5794A" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- 前侧翻开的箱盖 (压在箱体最前方) -->
+    <!-- 左前盖 -->
+    <polygon points="62,146 126,146 118,170 50,170" fill="#F2BA88" />
+    <!-- 右前盖 -->
+    <polygon points="130,146 194,146 206,170 138,170" fill="#E8AE7B" />
+    <!-- 前盖折痕阴影 -->
+    <line x1="62" y1="146" x2="194" y2="146" stroke="#B5794A" stroke-width="2.5" />
+  </g>
+</svg>

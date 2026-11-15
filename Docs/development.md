@@ -42,7 +42,7 @@ dotnet build               # 只编译
 | 调整排序或筛选 | `GodotVersionComparer`（在 `GodotArchiveService.cs` 内）、`MainWindowViewModel.ApplyFilter`、`RebuildMajorGroups`、`RefreshInstalled` |
 | 改临时文件保留策略 / 命名 | `AppState.TempFileRetentionDays`、`InstallService.GetTempZipPath`、`CleanupExpiredDownloads` |
 | 改缓存有效期 / 刷新间隔 | `AppState.CacheExpirationDays` / `RefreshCooldownSeconds`、`ReleaseCacheService`、`MainWindowViewModel` 的 `LoadReleasesAsync` / `RefreshReleasesAsync` / `FetchFromNetworkAsync` |
-| 增加 / 修改界面文案 | `Services/LocalizationService.cs`：新增 XAML 文本要同时加属性与 `Zh` / `En` 两个字典条目；带参数文案用 `F(key, args)` 格式化模板 |
+| 增加 / 修改界面文案 | `Services/LocalizationService.cs`：新增 XAML 文本要同时加属性与 `Zh` / `En` 两个字典条目；带参数文案用 `F(key, args)` 格式化模板。例外：设置窗口的语言下拉项固定写 `中文` / `English`（用语言自身的名称，不翻译） |
 | 增加设置项 | `SettingsWindow.axaml(.cs)` + `AppState` 字段 + `MainWindowViewModel` 的 `Index` 属性与 `partial void OnXxxChanged` 钩子（变更时立即 `Save()`） |
 | 改「打开链接 / 目录」的平台行为 | `Services/ShellService.cs` 的 `CreateOpenCommand()`（Windows / Mac / Linux 分支）；调用方是 `OpenArchiveUrl` / `OpenInstallDirectory` / `OpenFolder` 命令 |
 | 改主配色 / UI 样式 | `App.axaml`：`Application.Resources` 里的 `SystemAccentColor`、`Brand*` 与 `ListItem*` 画刷；`Application.Styles` 里的 `card` / `panel` / `primary` / `icon` / `h2` / `muted` / `ListBoxItem` / `rowAction` 全局样式（列表项 hover / 选中圆角、行内操作区显隐），各窗口共用；窗口背景使用主题默认色 |
@@ -51,6 +51,7 @@ dotnet build               # 只编译
 | 增加新的持久化设置 | `AppState` 加属性 → `AppStateService` 自动序列化 → VM 加 `[ObservableProperty]` 与变更时 `Save()` |
 | 增加新的界面命令 | VM 加 `[RelayCommand]` 方法 → XAML 绑定生成的 `XxxCommand` |
 | 换下载服务器 / 加镜像 | `DownloadService.BuildDownloadUrl` 与 `CreateClient`（UA、超时） |
+| 换程序 / 窗口图标 | 改根目录 `Icon.svg` 后重新导出 `Assets/Icon.ico`（多尺寸 ico），`GodotManager.csproj` 的 `<ApplicationIcon>` 已指向它；详见 [build.md](build.md#程序图标) |
 
 ### 加一个平台的最小改造顺序
 

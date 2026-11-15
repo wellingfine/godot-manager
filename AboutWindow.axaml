@@ -12,10 +12,8 @@
         <Border Classes="card">
             <StackPanel Spacing="10">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Border Width="44" Height="44" CornerRadius="10" Background="{DynamicResource BrandBrush}">
-                        <TextBlock Text="G" FontSize="24" FontWeight="Bold" Foreground="White"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Image Source="/Assets/Icon.png" Width="44" Height="44" Stretch="Uniform"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                     <StackPanel VerticalAlignment="Center" Spacing="2">
                         <TextBlock Classes="h2" Text="{Binding L.AppTitle}" />
                         <TextBlock x:Name="VersionTextBlock" Classes="muted" />

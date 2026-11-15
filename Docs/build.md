@@ -34,6 +34,25 @@ dotnet clean                          # 清理 bin / obj 中的构建产物
 
 项目是 `OutputType=WinExe` 的框架依赖应用，运行时机器需要安装 .NET 10 运行时；`app.manifest` 是 Windows 应用清单。
 
+## 程序图标
+
+程序图标是 `Assets/Icon.ico`（16 / 24 / 32 / 48 / 64 / 128 / 256 多尺寸，带透明通道），在 `GodotManager.csproj` 中声明：
+
+```xml
+<ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+```
+
+- `.NET SDK` 把它写进 exe 的 Win32 资源，资源管理器 / 任务栏 / 快捷方式显示该图标；
+- Avalonia 的构建任务会把同一个文件以 `!__AvaloniaDefaultWindowIcon` 嵌入程序集，运行时作为所有窗口的默认图标（标题栏 / 任务栏），因此各窗口无需单独设置 `Window.Icon`。
+
+图标源文件是仓库根目录的 `Icon.svg`（矢量图）。改完 `Icon.svg` 后需要重新导出并覆盖 `Assets/Icon.ico`，例如用 ImageMagick 一次导出全部尺寸：
+
+```bash
+magick Icon.svg -background none -define icon:auto-resize=256,128,64,48,32,24,16 Assets/Icon.ico
+```
+
+界面内的应用图标（关于 / 设置窗口）用同一张图导出的 `Assets/Icon.png`（256×256，透明背景），在 csproj 中以 `<AvaloniaResource Include="Assets\Icon.png" />` 嵌入，XAML 中用 `Source="/Assets/Icon.png"` 引用。
+
 ## 发布
 
 生成可分发的目录（框架依赖，需目标机器有 .NET 10 运行时）：

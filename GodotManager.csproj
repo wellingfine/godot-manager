@@ -5,7 +5,14 @@
     <Nullable>enable</Nullable>
     <Version>0.2.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- 程序图标（exe 图标 + Avalonia 默认窗口图标），源文件为 Icon.svg 导出的多尺寸 ico -->
+    <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 界面内展示的图标（关于 / 设置窗口） -->
+    <AvaloniaResource Include="Assets\Icon.png" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.6" />
