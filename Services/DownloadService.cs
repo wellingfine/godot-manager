@@ -26,11 +26,14 @@ public sealed class DownloadService
         return client;
     }
 
-    public static string BuildDownloadUrl(GodotRelease release, bool mono) =>
-        "https://downloads.godotengine.org/?version=" + Uri.EscapeDataString(release.Version) +
-        "&flavor=" + Uri.EscapeDataString(release.Flavor) +
-        "&slug=" + (mono ? "mono_win64.zip" : "win64.exe.zip") +
-        "&platform=windows.64";
+    public static string BuildDownloadUrl(GodotRelease release, bool mono)
+    {
+        var (slug, platform) = PlatformService.GetDownloadSpec(mono);
+        return "https://downloads.godotengine.org/?version=" + Uri.EscapeDataString(release.Version) +
+               "&flavor=" + Uri.EscapeDataString(release.Flavor) +
+               "&slug=" + Uri.EscapeDataString(slug) +
+               "&platform=" + Uri.EscapeDataString(platform);
+    }
 
     public async Task DownloadAsync(string url, string destination, IProgress<DownloadProgress> progress,
         CancellationToken cancellationToken)

@@ -142,7 +142,7 @@ dotnet publish -c Release -r osx-arm64 --self-contained true -o dist/GodotManage
 dotnet publish -c Release -r linux-x64 --self-contained true -o dist/GodotManager-0.2.0-linux-x64
 ```
 
-`UsePlatformDetect()` 让 Avalonia UI 可以在 macOS / Linux 启动，但**功能仍是 Windows 专用**（下载参数、exe 扫描、启动方式），上述命令只解决「能跑起来」。另外 `WinExe` + Windows 清单不会产生正规的 macOS `.app` bundle，正式分发需要额外打包步骤。改造点见 [architecture.md](architecture.md#平台支持现状)。
+`UsePlatformDetect()` 让 Avalonia UI 在 macOS / Linux 启动，下载 / 解压 / 启动也已按平台适配，上述命令可得到对应平台的可运行程序。不过 `WinExe` + Windows 清单不会产生正规的 macOS `.app` bundle，正式分发 Godot Manager 自身仍需额外打包步骤。平台细节见 [architecture.md](architecture.md#平台支持现状)。
 
 ## 常见问题
 

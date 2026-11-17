@@ -12,8 +12,9 @@ public static class InstallService
 {
     public const string DownloadsDirectoryName = "downloads";
 
-    private static readonly Regex ExecutableRegex = new(
-        @"^Godot_v(?<version>\d+(?:\.\d+)*)-(?<flavor>[a-z]+\d*)(?<mono>_mono)?_win(?:32|64)\.exe$",
+    // 官方各平台包名：Windows 的 exe 带 .exe，Linux 是无扩展名二进制，macOS 用版本目录名识别。
+    private static readonly Regex GodotNameRegex = new(
+        @"^Godot_v(?<version>\d+(?:\.\d+)*)-(?<flavor>[a-z]+\d*)(?<mono>_mono)?_(?:win(?:32|64)\.exe|linux\.[a-z0-9_]+|macos\.universal)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static string GetDownloadsDirectory(string installRoot) =>
@@ -21,30 +22,30 @@ public static class InstallService
 
     public static string GetTempZipPath(string installRoot, GodotRelease release, bool mono)
     {
-        var name = mono
-            ? $"Godot_v{release.Id}_mono_win64.zip"
-            : $"Godot_v{release.Id}_win64.exe.zip";
+        var name = PlatformService.GetArchiveName(release, mono);
         return Path.Combine(GetDownloadsDirectory(installRoot), Sanitize(name));
     }
 
     public static InstalledVersion Install(string zipPath, GodotRelease release, bool mono, string installRoot)
     {
         using var archive = ZipFile.OpenRead(zipPath);
-        var main = FindMainExecutable(archive.Entries, mono)
+        var platform = PlatformService.Current;
+        var main = FindMainExecutable(archive.Entries, mono, platform)
             ?? throw new InvalidOperationException("压缩包中未找到 Godot 可执行文件。");
 
         // 目录名沿用官方包命名（如 Godot_v4.4.1-stable_mono_win64），不再自己拼版本号。
-        var directory = Path.Combine(installRoot, Sanitize(Path.GetFileNameWithoutExtension(main.Name)));
+        var directory = Path.Combine(installRoot, Sanitize(PlatformService.GetInstallDirectoryName(release, mono)));
         if (Directory.Exists(directory))
         {
             Directory.Delete(directory, true);
         }
 
         Directory.CreateDirectory(directory);
-        ExtractFlattened(archive, directory, main);
+        ExtractFlattened(archive, directory, main, platform);
 
-        var executable = FindExecutable(directory, mono)
+        var executable = FindExecutable(directory, mono, platform)
             ?? throw new InvalidOperationException("压缩包中未找到 Godot 可执行文件。");
+        EnsureExecutable(executable);
 
         return new InstalledVersion
         {
@@ -60,7 +61,7 @@ public static class InstallService
 
     /// <summary>
     /// 扫描安装目录中已存在的 Godot（包括手动下载解压的版本）。
-    /// 识别规则：Godot_v{版本号}-{类型}[_mono]_win64.exe，排除 _console 版本。
+    /// 识别规则：Godot_v{版本号}-{类型}[_mono]_{win64.exe|linux.x86_64|macos.universal}，排除 _console 版本。
     /// </summary>
     public static IReadOnlyList<InstalledVersion> Scan(string installRoot)
     {
@@ -70,12 +71,19 @@ public static class InstallService
             return result;
         }
 
+        var platform = PlatformService.Current;
         List<string> directories;
         List<string> rootExecutables;
         try
         {
             directories = Directory.EnumerateDirectories(installRoot).ToList();
-            rootExecutables = Directory.EnumerateFiles(installRoot, "*.exe", SearchOption.TopDirectoryOnly).ToList();
+            rootExecutables = platform switch
+            {
+                ShellPlatform.Windows => Directory.EnumerateFiles(installRoot, "*.exe", SearchOption.TopDirectoryOnly).ToList(),
+                ShellPlatform.Linux => Directory.EnumerateFiles(installRoot, "*", SearchOption.TopDirectoryOnly)
+                    .Where(path => GodotNameRegex.IsMatch(Path.GetFileName(path))).ToList(),
+                _ => new List<string>()
+            };
         }
         catch (IOException)
         {
@@ -94,8 +102,12 @@ public static class InstallService
                 continue;
             }
 
-            var executable = FindGodotExecutable(directory);
-            var record = executable is null ? null : CreateScannedRecord(executable, directory);
+            var executable = FindGodotExecutable(directory, platform);
+            // macOS 的可执行文件固定叫 Godot，版本信息只能从版本目录名解析。
+            var name = platform == ShellPlatform.Mac
+                ? Path.GetFileName(directory)
+                : Path.GetFileName(executable ?? string.Empty);
+            var record = executable is null ? null : CreateScannedRecord(name, executable, directory);
             if (record is not null)
             {
                 result.Add(record);
@@ -104,7 +116,7 @@ public static class InstallService
 
         foreach (var executable in rootExecutables)
         {
-            var record = CreateScannedRecord(executable, installRoot);
+            var record = CreateScannedRecord(Path.GetFileName(executable), executable, installRoot);
             if (record is not null)
             {
                 result.Add(record);
@@ -173,13 +185,20 @@ public static class InstallService
         return removed;
     }
 
-    private static string? FindGodotExecutable(string directory)
+    private static string? FindGodotExecutable(string directory, ShellPlatform platform)
     {
         try
         {
-            return Directory.EnumerateFiles(directory, "*.exe", SearchOption.AllDirectories)
+            if (platform == ShellPlatform.Mac)
+            {
+                return Directory.EnumerateFiles(directory, "Godot", SearchOption.AllDirectories)
+                    .FirstOrDefault(path => path.Replace('\\', '/')
+                        .EndsWith("/Contents/MacOS/Godot", StringComparison.OrdinalIgnoreCase));
+            }
+
+            return Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
                 .Where(path => !Path.GetFileName(path).Contains("console", StringComparison.OrdinalIgnoreCase))
-                .FirstOrDefault(path => ExecutableRegex.IsMatch(Path.GetFileName(path)));
+                .FirstOrDefault(path => GodotNameRegex.IsMatch(Path.GetFileName(path)));
         }
         catch (IOException)
         {
@@ -191,9 +210,9 @@ public static class InstallService
         }
     }
 
-    private static InstalledVersion? CreateScannedRecord(string executable, string directory)
+    private static InstalledVersion? CreateScannedRecord(string name, string executable, string directory)
     {
-        var match = ExecutableRegex.Match(Path.GetFileName(executable));
+        var match = GodotNameRegex.Match(name);
         if (!match.Success)
         {
             return null;
@@ -216,10 +235,18 @@ public static class InstallService
         };
     }
 
-    private static string? FindExecutable(string directory, bool mono)
+    private static string? FindExecutable(string directory, bool mono, ShellPlatform platform)
     {
-        var files = Directory.EnumerateFiles(directory, "*.exe", SearchOption.AllDirectories)
-            .Where(path => !Path.GetFileName(path).Contains("console", StringComparison.OrdinalIgnoreCase))
+        if (platform == ShellPlatform.Mac)
+        {
+            return Directory.EnumerateFiles(directory, "Godot", SearchOption.AllDirectories)
+                .FirstOrDefault(path => path.Replace('\\', '/')
+                    .EndsWith("/Contents/MacOS/Godot", StringComparison.OrdinalIgnoreCase));
+        }
+
+        var files = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .Where(path => GodotNameRegex.IsMatch(Path.GetFileName(path)) &&
+                           !Path.GetFileName(path).Contains("console", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         return files
@@ -235,13 +262,15 @@ public static class InstallService
     /// 以主 exe 所在目录为基准剥掉这层包装，让 exe 与 GodotSharp 直接落在官方命名的版本目录下；
     /// 包内其它根级条目（README 等）仍按原路径保留。
     /// </summary>
-    private static void ExtractFlattened(ZipArchive archive, string destination, ZipArchiveEntry main)
+    private static void ExtractFlattened(ZipArchive archive, string destination, ZipArchiveEntry main,
+        ShellPlatform platform)
     {
         var root = Path.GetFullPath(destination).TrimEnd(
             Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var name = main.FullName.Replace('\\', '/');
         var slash = name.LastIndexOf('/');
-        var prefix = slash < 0 || name.StartsWith('/') ||
+        // macOS 必须保留 Godot.app/Contents/... 的 bundle 结构，不能剥掉外层目录。
+        var prefix = platform == ShellPlatform.Mac || slash < 0 || name.StartsWith('/') ||
                      name.Split('/').Any(part => part is "." or "..")
             ? null
             : name[..(slash + 1)];
@@ -276,16 +305,48 @@ public static class InstallService
     /// <summary>
     /// 在压缩包中定位主 exe（忽略 _console.exe），用于确定官方目录名与需要剥掉的包装目录。
     /// </summary>
-    private static ZipArchiveEntry? FindMainExecutable(IReadOnlyList<ZipArchiveEntry> entries, bool mono)
+    private static ZipArchiveEntry? FindMainExecutable(IReadOnlyList<ZipArchiveEntry> entries, bool mono,
+        ShellPlatform platform)
     {
+        if (platform == ShellPlatform.Mac)
+        {
+            var apps = entries
+                .Where(entry => entry.FullName.EndsWith("/Contents/MacOS/Godot", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            return apps
+                       .FirstOrDefault(entry => entry.FullName.Contains("mono", StringComparison.OrdinalIgnoreCase) == mono)
+                   ?? apps.FirstOrDefault();
+        }
+
         var executables = entries
-            .Where(entry => entry.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+            .Where(entry => GodotNameRegex.IsMatch(entry.Name) &&
                             !entry.Name.Contains("console", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         return executables
             .FirstOrDefault(entry => entry.Name.Contains("mono", StringComparison.OrdinalIgnoreCase) == mono)
             ?? executables.FirstOrDefault();
+    }
+
+    private static void EnsureExecutable(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            var mode = File.GetUnixFileMode(path);
+            File.SetUnixFileMode(path, mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute |
+                                            UnixFileMode.OtherExecute);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static string Sanitize(string value)

@@ -118,7 +118,7 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 
 - 归档页条目正则：`ReleaseRegex` 匹配 `<a class="archive-version" ... href="/download/archive/{slug}">` 中的 `h4`（版本 Id）与 `span`（英文日期）；在每个条目到下一个条目之间的片段里用 `NewsRegex` 取 `btn-release-notes` 的 `/article/...` 链接，转成绝对 URL 存入 `GodotRelease.NewsUrl`（少数版本没有公告则留空），随 `releases-cache.json` 一起缓存。
 - 版本号解析：`{数字版本}-{flavor}`，`flavor` 的字母前缀即发布类型（`stable` / `rc` / `beta` / `dev` / `alpha`）。
-- 下载直链：`https://downloads.godotengine.org/?version={version}&flavor={flavor}&slug={win64.exe.zip | mono_win64.zip}&platform=windows.64`，服务端 302 到官方对象存储。
+- 下载直链：`https://downloads.godotengine.org/?version={version}&flavor={flavor}&slug={slug}&platform={platform}`，服务端 302 到官方对象存储。slug / platform 由 `PlatformService.GetDownloadSpec()` 按当前系统选择：Windows `win64.exe.zip` / `mono_win64.zip` + `windows.64`，macOS `macos.universal.zip` / `mono_macos.universal.zip` + `macos.universal`，Linux `linux.x86_64.zip` / `mono_linux_x86_64.zip` + `linux.64`
 - 排序：在线列表与已安装列表都按语义化版本号降序；在线列表同版本号内按发布日期降序。
 - 主版本 tab：从解析结果按 `GetMajor()` 分组动态生成，不是硬编码。
 - 发布类型筛选：`stable` / `rc` / `beta` / `dev` / `alpha` 各有一个复选框（按此顺序），默认勾前三个；`ApplyFilter()` 统一走 `IsChannelEnabled(channel)`，勾选状态持久化到 `state.json`。旧配置缺少 `ShowStable` 时由 `AppStateService.Load()` 一次性迁移到新默认值。
@@ -144,18 +144,14 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 
 ## 平台支持现状
 
-**当前仅 Windows 64 位**：下载参数写死 `windows.64`，扫描与解压只找 `*.exe`，启动直接 `Process.Start(exe)`。
+下载、解压、识别与启动已覆盖三大平台，参数由 `PlatformService`（基于 `ShellService.Current`）集中提供：
 
-已经跨平台的部分：Avalonia 的 `UsePlatformDetect()`、版本解析 / 排序 / tab / 下载进度 / 过期清理 / `LocalApplicationData` 配置路径，以及 `ShellService` 的「打开链接 / 打开目录」（Windows 资源管理器、macOS Finder、Linux 文件管理器）。因此 Mac 上 `dotnet run` 能开窗口、能刷版本列表、能点开链接和目录，但下载、识别、启动仍不可用。
+| 平台 | 下载 slug | platform | 包内可执行文件 |
+| --- | --- | --- | --- |
+| Windows x86_64 | `win64.exe.zip` / `mono_win64.zip` | `windows.64` | `Godot_v{版本}-{类型}[_mono]_win64.exe` |
+| macOS universal | `macos.universal.zip` / `mono_macos.universal.zip` | `macos.universal` | `Godot.app` / `Godot_mono.app` 的 `Contents/MacOS/Godot` |
+| Linux x86_64 | `linux.x86_64.zip` / `mono_linux_x86_64.zip` | `linux.64` | `Godot_v{版本}-{类型}[_mono]_linux.x86_64` |
 
-要支持 macOS，需要改动：
+解压规则：Windows / Linux 剥掉包内同名外层目录，macOS 保留 `.app` bundle 结构；Unix 平台会给主可执行文件补上执行权限。启动规则：Windows / Linux 直接执行，macOS 用 `open -a` 打开 `.app`。扫描规则：Windows / Linux 按文件名正则识别（忽略 `_console`），macOS 从版本目录名解析版本、在目录内找 `Contents/MacOS/Godot`。
 
-| 位置 | 改动 |
-| --- | --- |
-| `DownloadService.BuildDownloadUrl` | 按 `OperatingSystem.IsMacOS()` 选 `macos.universal.zip` / `mono_macos.universal.zip`、`platform=macos.universal` |
-| `InstallService.ExecutableRegex` / `Scan` / `Install` | 识别 `Godot.app` / `Godot_mono.app`，从 app 名或 `Info.plist` 解析版本，定位 `Contents/MacOS/*` |
-| `InstallService.GetTempZipPath` | 使用 macOS 包文件名 |
-| `MainWindowViewModel.Launch` | 改用 `open -a <.app>` |
-| `GodotManager.csproj` / `app.manifest` | `WinExe` + Windows 清单；正式发布需打包 `.app` bundle |
-
-Linux 同理：`linux.x86_64.zip` / `mono_linux_x86_64.zip`、`platform=linux.64`，解压后是普通可执行文件（需可执行权限）。
+已跨平台的部分：Avalonia 的 `UsePlatformDetect()`、版本解析 / 排序 / tab / 下载进度 / 过期清理 / `LocalApplicationData` 配置路径，以及 `ShellService` 的「打开链接 / 打开目录」。仍需注意：`WinExe` + Windows 清单不会生成正规的 macOS `.app` bundle，正式分发 Godot Manager 自身仍需各平台打包步骤。

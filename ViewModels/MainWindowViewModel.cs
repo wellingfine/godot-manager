@@ -574,11 +574,30 @@ public partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            Process.Start(new ProcessStartInfo(target.ExecutablePath)
+            if (ShellService.Current == ShellPlatform.Mac)
             {
-                UseShellExecute = true,
-                WorkingDirectory = Path.GetDirectoryName(target.ExecutablePath)
-            });
+                // 通过 open -a 启动 app bundle，避免直接运行二进制丢失 Resources 上下文。
+                var app = Directory.EnumerateDirectories(target.InstallDirectory, "*.app").FirstOrDefault();
+                if (app is null)
+                {
+                    Status = L.F("StatusExeMissing", target.DisplayName);
+                    return;
+                }
+
+                var open = new ProcessStartInfo("open") { UseShellExecute = false };
+                open.ArgumentList.Add("-a");
+                open.ArgumentList.Add(app);
+                Process.Start(open);
+            }
+            else
+            {
+                Process.Start(new ProcessStartInfo(target.ExecutablePath)
+                {
+                    UseShellExecute = !OperatingSystem.IsLinux(),
+                    WorkingDirectory = Path.GetDirectoryName(target.ExecutablePath)
+                });
+            }
+
             Status = L.F("StatusLaunched", target.DisplayName);
         }
         catch (Exception exception)

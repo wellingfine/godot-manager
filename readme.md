@@ -10,7 +10,7 @@
 - 版本列表联网成功后缓存到本地，默认 2 天有效；启动优先从缓存加载，点刷新图标重新拉取，30 秒内重复刷新从本地缓存解析
 - 版本按版本号从大到小（语义化，如 4.10 > 4.9）排列，左侧竖向 tab 可按 4.x / 3.x / 2.x / 1.x 主版本筛选
 - 发布类型按 Stable / RC / Beta / Dev / Alpha 五个复选框分别勾选，**默认勾前三个**；右侧显示筛选后的版本数，支持按版本号搜索、刷新
-- **.NET 版默认勾选**（放在搜索框左侧），可切换为标准版；悬停版本行显示「新闻」「下载」按钮，下载 Windows 64 位官方包，显示进度并支持取消
+- **.NET 版默认勾选**（放在搜索框左侧），可切换为标准版；悬停版本行显示「新闻」「下载」按钮，下载匹配当前系统的官方包（Windows x86_64 / macOS universal / Linux x86_64），显示进度并支持取消
 - 勾选 .NET 版时在线版本列表会显示蓝色 `.NET` 标签；已安装列表同样用标签显示类型（`.NET` / 标准版），版本号、标签与安装时间单行展示
 - 右上角设置图标打开配置窗口：界面语言（中文 / English，切换立即生效）、Godot 安装位置、安装包保留方式
 - 版本来源网址、设置里的安装目录都是可点击链接：前者用浏览器打开，后者用文件浏览器打开（Windows 资源管理器 / macOS Finder / Linux 文件管理器），均跨平台
@@ -47,11 +47,11 @@ dotnet run
 ## 说明
 
 - 下载直链使用官网提供的 `downloads.godotengine.org`，会重定向到官方对象存储，需要联网
-- 默认安装目录为 `%LOCALAPPDATA%\GodotManager\versions`，每个版本解压到独立子目录，目录名沿用官方包名（如 `Godot_v4.4.1-stable_mono_win64`），包内自带的同名外层目录会被剥掉
-- 扫描识别官方命名的 `Godot_v{版本}-{类型}[_mono]_win64.exe`（忽略 `_console.exe`），直接放在安装目录根下的 exe 也能识别
+- 默认安装目录为 `%LOCALAPPDATA%\GodotManager\versions`（macOS / Linux 为对应的 LocalApplicationData 路径），每个版本解压到独立子目录，目录名沿用官方包名（如 `Godot_v4.4.1-stable_mono_win64` / `Godot_v4.4.1-stable_macos.universal`）；Windows / Linux 会剥掉包内同名外层目录，macOS 保留 `.app` bundle 结构
+- 扫描识别官方命名的 `Godot_v{版本}-{类型}[_mono]_{win64.exe|linux.x86_64|macos.universal}`（忽略 `_console.exe`），直接放在安装目录根下的可执行文件也能识别；macOS 从版本目录名解析版本
 - 卸载会删除该版本的解压目录；若 exe 直接放在安装目录根下，则只删除该 exe，不会删掉整个安装目录
 - 过期清理只处理 `downloads` 子目录内的 `.zip` / `.part`，安装目录里的其它文件（包括根目录下已有的 zip）不受影响
 - 版本列表缓存位于 `%LOCALAPPDATA%\GodotManager\releases-cache.json`；可在 `state.json` 调整 `CacheExpirationDays`（默认 2 天）与 `RefreshCooldownSeconds`（默认 30 秒）
 - `state.json` 中界面相关字段：`Language`（`zh` / `en`）、`UseMono`（默认 `true`）、`SelectedMajor`、`ShowStable` / `ShowRc` / `ShowBeta` / `ShowDev` / `ShowAlpha`（前三个默认 `true`）、`DeleteArchiveAfterInstall`（`false` = 保留 30 天，`true` = 下完即删）
 - 语言切换与设置窗口里的改动即时生效并立即写入配置，无需重启
-- 当前下载目标是 Windows 64 位编辑器（含/不含 .NET 支持）
+- 下载目标按当前系统自动选择：Windows x86_64 / macOS universal / Linux x86_64（含/不含 .NET 支持）

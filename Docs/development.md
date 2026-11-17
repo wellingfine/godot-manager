@@ -5,7 +5,7 @@
 - **.NET 10 SDK**（本项目目标框架 `net10.0`；开发时使用 10.0.401）
 - 可访问 NuGet（`api.nuget.org`）与 `godotengine.org`（版本列表、下载重定向）
 - 推荐 IDE：Visual Studio 2026 / JetBrains Rider / VS Code + C# Dev Kit，配合 Avalonia 扩展可获得 XAML 预览与补全
-- Windows 为主；macOS / Linux 能编译运行 UI，但功能受平台限制（见 [architecture.md](architecture.md#平台支持现状)）
+- Windows / macOS / Linux 均可下载、解压、识别并启动对应平台的编辑器（见 [architecture.md](architecture.md#平台支持现状)）；正式分发仍需各平台打包步骤
 
 ## 运行与调试
 
@@ -37,7 +37,7 @@ dotnet build               # 只编译
 
 | 想做的事 | 改哪里 |
 | --- | --- |
-| 增加 macOS / Linux 支持 | `DownloadService.BuildDownloadUrl`、`InstallService`（`ExecutableRegex` / `Scan` / `Install` / `GetTempZipPath`）、`MainWindowViewModel.Launch`；详见 [architecture.md](architecture.md#平台支持现状) |
+| 调整 macOS / Linux 下载或启动行为 | `PlatformService`、`DownloadService.BuildDownloadUrl`、`InstallService`（`GodotNameRegex` / `Scan` / `Install` / `GetTempZipPath`）、`MainWindowViewModel.Launch`；详见 [architecture.md](architecture.md#平台支持现状) |
 | 更换版本数据源 / 适配官网改版 | `GodotArchiveService`（`ArchiveUrl`、`ReleaseRegex`、`NewsRegex`、`Parse`、`ParseDate`） |
 | 调整排序或筛选 | `GodotVersionComparer`（在 `GodotArchiveService.cs` 内）、`MainWindowViewModel.ApplyFilter`、`RebuildMajorGroups`、`RefreshInstalled` |
 | 改临时文件保留策略 / 命名 | `AppState.TempFileRetentionDays`、`InstallService.GetTempZipPath`、`CleanupExpiredDownloads` |
@@ -55,10 +55,11 @@ dotnet build               # 只编译
 
 ### 加一个平台的最小改造顺序
 
-1. 在服务层引入「平台描述」（下载 slug / platform、包文件名、可执行文件名或 `.app` 路径），用 `OperatingSystem.IsWindows() / IsMacOS() / IsLinux()` 选择。
-2. 让 `Install()` 与 `Scan()` 共用同一个「定位可执行文件」函数，避免出现两套识别规则。
-3. 把 `Launch()` 换成平台对应的启动方式（`Process.Start` / `open -a` / 加可执行权限后直接执行）。
-4. 补文档与手动验证清单，再考虑 `.app` bundle 或 Linux 打包。
+1. 在 `PlatformService` 增加平台分支（下载 slug / platform、包文件名、安装目录名）；平台枚举来自 `ShellService.Current`。
+2. 在 `InstallService.GodotNameRegex` 和「定位可执行文件」相关函数里补上新平台的命名规则，让 `Install()` 与 `Scan()` 共用同一套识别逻辑。
+3. 如果是 `.app` bundle，解压时保留 bundle 结构；Unix 可执行文件要补执行权限。
+4. 在 `MainWindowViewModel.Launch` 补上该平台的启动方式（`Process.Start` / `open -a` / 直接执行）。
+5. 补文档与手动验证清单，再考虑程序自身的 `.app` bundle 或 Linux 打包。
 
 ## 手动验证清单
 
