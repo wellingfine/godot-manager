@@ -37,7 +37,7 @@ dotnet build               # 只编译
 
 | 想做的事 | 改哪里 |
 | --- | --- |
-| 调整 macOS / Linux 下载或启动行为 | `PlatformService`、`DownloadService.BuildDownloadUrl`、`InstallService`（`GodotNameRegex` / `Scan` / `Install` / `GetTempZipPath`）、`MainWindowViewModel.Launch`；详见 [architecture.md](architecture.md#平台支持现状) |
+| 调整下载拆分按钮 / 各平台行为 | `MainWindowViewModel`（`DownloadCommand` / `DownloadForPlatformCommand` / `DownloadCoreAsync`）、`MainWindow.axaml` 的 `SplitButton` 与 `MenuFlyout`、`App.axaml` 的 `SplitButton.soft` 样式、`PlatformService`、`DownloadLinkService`、`InstallService`（`GodotNameRegex` / `Scan` / `Install` / `GetTempZipPath`）、`MainWindowViewModel.Launch`；详见 [architecture.md](architecture.md#平台支持现状) |
 | 更换版本数据源 / 适配官网改版 | `GodotArchiveService`（`ArchiveUrl`、`ReleaseRegex`、`NewsRegex`、`Parse`、`ParseDate`） |
 | 调整排序或筛选 | `GodotVersionComparer`（在 `GodotArchiveService.cs` 内）、`MainWindowViewModel.ApplyFilter`、`RebuildMajorGroups`、`RefreshInstalled` |
 | 改临时文件保留策略 / 命名 | `AppState.TempFileRetentionDays`、`InstallService.GetTempZipPath`、`CleanupExpiredDownloads` |
@@ -50,12 +50,12 @@ dotnet build               # 只编译
 | 列表增加字段 | 对应 `Models/*` → `MainWindow.axaml` 的 `DataTemplate`（注意 `DataType`） |
 | 增加新的持久化设置 | `AppState` 加属性 → `AppStateService` 自动序列化 → VM 加 `[ObservableProperty]` 与变更时 `Save()` |
 | 增加新的界面命令 | VM 加 `[RelayCommand]` 方法 → XAML 绑定生成的 `XxxCommand` |
-| 换下载服务器 / 加镜像 | `DownloadService.BuildDownloadUrl` 与 `CreateClient`（UA、超时） |
+| 换下载来源 / 适配官网下载页改版 | `DownloadLinkService`（`PlatformBlockRegex` / `ButtonRegex` / `Parse`）与 `CreateClient`（UA、超时） |
 | 换程序 / 窗口图标 | 改根目录 `Icon.svg` 后重新导出 `Assets/Icon.ico`（多尺寸 ico），`GodotManager.csproj` 的 `<ApplicationIcon>` 已指向它；详见 [build.md](build.md#程序图标) |
 
 ### 加一个平台的最小改造顺序
 
-1. 在 `PlatformService` 增加平台分支（下载 slug / platform、包文件名、安装目录名）；平台枚举来自 `ShellService.Current`。
+1. 在 `PlatformService.All` 增加平台项并补齐各平台分支（下载页分组名、包文件名、安装目录名、记录 Id），再在 `MainWindow.axaml` 的 `MenuFlyout` 里加一个 `MenuItem`（`CommandParameter` 用枚举名）并补一个 `IsXxxSelected` 计算属性；数组顺序即菜单顺序，目标平台由用户选择，`Current` 只用于默认值与启动判断。下载链接由 `DownloadLinkService` 从页面按钮抓取。
 2. 在 `InstallService.GodotNameRegex` 和「定位可执行文件」相关函数里补上新平台的命名规则，让 `Install()` 与 `Scan()` 共用同一套识别逻辑。
 3. 如果是 `.app` bundle，解压时保留 bundle 结构；Unix 可执行文件要补执行权限。
 4. 在 `MainWindowViewModel.Launch` 补上该平台的启动方式（`Process.Start` / `open -a` / 直接执行）。

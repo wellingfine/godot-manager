@@ -12,29 +12,32 @@ public static class InstallService
 {
     public const string DownloadsDirectoryName = "downloads";
 
-    // 官方各平台包名：Windows 的 exe 带 .exe，Linux 是无扩展名二进制，macOS 用版本目录名识别。
+    // 同时匹配官方可执行文件名与版本目录名（目录名不带 .exe），platform 组用于反推目标系统。
     private static readonly Regex GodotNameRegex = new(
-        @"^Godot_v(?<version>\d+(?:\.\d+)*)-(?<flavor>[a-z]+\d*)(?<mono>_mono)?_(?:win(?:32|64)\.exe|linux\.[a-z0-9_]+|macos\.universal)$",
+        @"^Godot_v(?<version>\d+(?:\.\d+)*)-(?<flavor>[a-z]+\d*)(?<mono>_mono)?_" +
+        @"(?<platform>win(?:32|64)(?:\.exe)?|linux\.[a-z0-9_]+|macos\.universal)$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public static string GetDownloadsDirectory(string installRoot) =>
         Path.Combine(installRoot, DownloadsDirectoryName);
 
-    public static string GetTempZipPath(string installRoot, GodotRelease release, bool mono)
+    public static string GetTempZipPath(string installRoot, GodotRelease release, bool mono,
+        ShellPlatform platform)
     {
-        var name = PlatformService.GetArchiveName(release, mono);
+        var name = PlatformService.GetArchiveName(release, mono, platform);
         return Path.Combine(GetDownloadsDirectory(installRoot), Sanitize(name));
     }
 
-    public static InstalledVersion Install(string zipPath, GodotRelease release, bool mono, string installRoot)
+    public static InstalledVersion Install(string zipPath, GodotRelease release, bool mono, string installRoot,
+        ShellPlatform platform)
     {
         using var archive = ZipFile.OpenRead(zipPath);
-        var platform = PlatformService.Current;
         var main = FindMainExecutable(archive.Entries, mono, platform)
             ?? throw new InvalidOperationException("压缩包中未找到 Godot 可执行文件。");
 
         // 目录名沿用官方包命名（如 Godot_v4.4.1-stable_mono_win64），不再自己拼版本号。
-        var directory = Path.Combine(installRoot, Sanitize(PlatformService.GetInstallDirectoryName(release, mono)));
+        var directory = Path.Combine(installRoot,
+            Sanitize(PlatformService.GetInstallDirectoryName(release, mono, platform)));
         if (Directory.Exists(directory))
         {
             Directory.Delete(directory, true);
@@ -49,10 +52,11 @@ public static class InstallService
 
         return new InstalledVersion
         {
-            Id = release.Id + (mono ? "-mono" : ""),
+            Id = PlatformService.GetInstalledId(release, mono, platform),
             Version = release.Version,
             Flavor = release.Flavor,
             IsMono = mono,
+            Platform = platform.ToString(),
             ExecutablePath = executable,
             InstallDirectory = directory,
             InstalledAt = DateTime.Now
@@ -61,7 +65,7 @@ public static class InstallService
 
     /// <summary>
     /// 扫描安装目录中已存在的 Godot（包括手动下载解压的版本）。
-    /// 识别规则：Godot_v{版本号}-{类型}[_mono]_{win64.exe|linux.x86_64|macos.universal}，排除 _console 版本。
+    /// 从版本目录名 / 可执行文件名的平台后缀反推目标系统，因此同一目录下混合安装的多个平台都能识别。
     /// </summary>
     public static IReadOnlyList<InstalledVersion> Scan(string installRoot)
     {
@@ -71,19 +75,12 @@ public static class InstallService
             return result;
         }
 
-        var platform = PlatformService.Current;
         List<string> directories;
-        List<string> rootExecutables;
+        List<string> rootFiles;
         try
         {
             directories = Directory.EnumerateDirectories(installRoot).ToList();
-            rootExecutables = platform switch
-            {
-                ShellPlatform.Windows => Directory.EnumerateFiles(installRoot, "*.exe", SearchOption.TopDirectoryOnly).ToList(),
-                ShellPlatform.Linux => Directory.EnumerateFiles(installRoot, "*", SearchOption.TopDirectoryOnly)
-                    .Where(path => GodotNameRegex.IsMatch(Path.GetFileName(path))).ToList(),
-                _ => new List<string>()
-            };
+            rootFiles = Directory.EnumerateFiles(installRoot, "*", SearchOption.TopDirectoryOnly).ToList();
         }
         catch (IOException)
         {
@@ -102,21 +99,55 @@ public static class InstallService
                 continue;
             }
 
-            var executable = FindGodotExecutable(directory, platform);
-            // macOS 的可执行文件固定叫 Godot，版本信息只能从版本目录名解析。
-            var name = platform == ShellPlatform.Mac
-                ? Path.GetFileName(directory)
-                : Path.GetFileName(executable ?? string.Empty);
-            var record = executable is null ? null : CreateScannedRecord(name, executable, directory);
-            if (record is not null)
+            var name = Path.GetFileName(directory);
+            var match = GodotNameRegex.Match(name);
+            if (match.Success)
             {
-                result.Add(record);
+                var platform = PlatformService.FromSuffix(match.Groups["platform"].Value);
+                var executable = FindGodotExecutable(directory, platform);
+                var record = executable is null
+                    ? null
+                    : CreateScannedRecord(name, executable, directory, platform);
+                if (record is not null)
+                {
+                    result.Add(record);
+                }
+            }
+            else
+            {
+                // 手动解压或旧版命名：依次按三种平台在目录内找可执行文件。
+                foreach (var platform in PlatformService.All)
+                {
+                    var executable = FindGodotExecutable(directory, platform);
+                    if (executable is null)
+                    {
+                        continue;
+                    }
+
+                    var executableName = Path.GetFileName(executable);
+                    var record = GodotNameRegex.IsMatch(executableName)
+                        ? CreateScannedRecord(executableName, executable, directory, platform)
+                        : null;
+                    if (record is not null)
+                    {
+                        result.Add(record);
+                    }
+                    break;
+                }
             }
         }
 
-        foreach (var executable in rootExecutables)
+        foreach (var file in rootFiles)
         {
-            var record = CreateScannedRecord(Path.GetFileName(executable), executable, installRoot);
+            var name = Path.GetFileName(file);
+            var match = GodotNameRegex.Match(name);
+            if (!match.Success || name.Contains("console", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var platform = PlatformService.FromSuffix(match.Groups["platform"].Value);
+            var record = CreateScannedRecord(name, file, installRoot, platform);
             if (record is not null)
             {
                 result.Add(record);
@@ -210,7 +241,8 @@ public static class InstallService
         }
     }
 
-    private static InstalledVersion? CreateScannedRecord(string name, string executable, string directory)
+    private static InstalledVersion? CreateScannedRecord(string name, string executable, string directory,
+        ShellPlatform platform)
     {
         var match = GodotNameRegex.Match(name);
         if (!match.Success)
@@ -221,14 +253,15 @@ public static class InstallService
         var version = match.Groups["version"].Value;
         var flavor = match.Groups["flavor"].Value.ToLowerInvariant();
         var mono = match.Groups["mono"].Success;
-        var id = $"{version}-{flavor}";
+        var platformSuffix = platform.ToString().ToLowerInvariant();
 
         return new InstalledVersion
         {
-            Id = id + (mono ? "-mono" : ""),
+            Id = $"{version}-{flavor}{(mono ? "-mono" : "")}-{platformSuffix}",
             Version = version,
             Flavor = flavor,
             IsMono = mono,
+            Platform = platform.ToString(),
             ExecutablePath = executable,
             InstallDirectory = directory,
             InstalledAt = File.GetLastWriteTime(executable)

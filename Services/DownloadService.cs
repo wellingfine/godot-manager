@@ -3,7 +3,6 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using GodotManager.Models;
 
 namespace GodotManager.Services;
 
@@ -24,15 +23,6 @@ public sealed class DownloadService
         var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("GodotManager/1.0");
         return client;
-    }
-
-    public static string BuildDownloadUrl(GodotRelease release, bool mono)
-    {
-        var (slug, platform) = PlatformService.GetDownloadSpec(mono);
-        return "https://downloads.godotengine.org/?version=" + Uri.EscapeDataString(release.Version) +
-               "&flavor=" + Uri.EscapeDataString(release.Flavor) +
-               "&slug=" + Uri.EscapeDataString(slug) +
-               "&platform=" + Uri.EscapeDataString(platform);
     }
 
     public async Task DownloadAsync(string url, string destination, IProgress<DownloadProgress> progress,

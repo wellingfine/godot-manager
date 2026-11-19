@@ -238,6 +238,17 @@
         <Style Selector="Button.soft:pointerover">
             <Setter Property="Background" Value="{DynamicResource AccentBorderBrush}" />
         </Style>
+        <Style Selector="SplitButton.soft">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="16,9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="SplitButton.soft:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentBorderBrush}" />
+        </Style>
         <Style Selector="Button.subtle">
             <Setter Property="Background" Value="{DynamicResource SubtleBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource MutedTextBrush}" />

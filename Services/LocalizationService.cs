@@ -56,6 +56,11 @@ public sealed class LocalizationService : ObservableObject
     public string ChannelLabel => T(nameof(ChannelLabel));
     public string ChannelTooltip => T(nameof(ChannelTooltip));
     public string DotNetLabel => T(nameof(DotNetLabel));
+    public string PlatformTooltip => T(nameof(PlatformTooltip));
+    public string SourcePageLabel => T(nameof(SourcePageLabel));
+    public string FileUrlLabel => T(nameof(FileUrlLabel));
+    public string StatusLinkNotResolved => T(nameof(StatusLinkNotResolved));
+    public string StatusPlatformMismatch => T(nameof(StatusPlatformMismatch));
     public string Download => T(nameof(Download));
     public string News => T(nameof(News));
     public string NewsTooltip => T(nameof(NewsTooltip));
@@ -103,6 +108,11 @@ public sealed class LocalizationService : ObservableObject
         ["ChannelLabel"] = "版本类型",
         ["ChannelTooltip"] = "勾选要显示的版本类型，默认勾 Stable / RC / Beta",
         ["DotNetLabel"] = ".NET 版",
+        ["PlatformTooltip"] = "左侧按钮直接下载当前系统版本；下拉选其它平台会立即下载，异平台包只能下载解压、不能在本机启动",
+        ["SourcePageLabel"] = "下载源页面：",
+        ["FileUrlLabel"] = "文件链接：",
+        ["StatusLinkNotResolved"] = "（尚未取得下载链接）",
+        ["StatusPlatformMismatch"] = "该版本是 {0} 包，无法在 {1} 上启动",
         ["Download"] = "下载",
         ["News"] = "新闻",
         ["NewsTooltip"] = "查看该版本的发布公告",
@@ -146,6 +156,7 @@ public sealed class LocalizationService : ObservableObject
         ["StatusExtracting"] = "下载完成，正在解压…",
         ["StatusInstalled"] = "{0} 已安装，点击「启动」即可打开。",
         ["StatusArchiveKept"] = " 安装包已保留在 downloads 目录。",
+        ["StatusDownloadedOnly"] = "{0}（{1}）已下载到 {2}，异平台包不解压。",
         ["StatusCancelled"] = "下载已取消。",
         ["StatusDownloadFailed"] = "下载失败：{0}",
         ["StatusAlreadyInstalled"] = "{0} 已安装，可直接启动。",
@@ -191,6 +202,11 @@ public sealed class LocalizationService : ObservableObject
         ["ChannelLabel"] = "Channels",
         ["ChannelTooltip"] = "Select which release channels to show; Stable, RC and Beta are checked by default.",
         ["DotNetLabel"] = ".NET build",
+        ["PlatformTooltip"] = "Main button downloads the current OS build. Pick another OS from the dropdown to download it immediately; other-platform builds can be extracted but not launched here.",
+        ["SourcePageLabel"] = "Source page:",
+        ["FileUrlLabel"] = "File URL:",
+        ["StatusLinkNotResolved"] = "(download link not resolved)",
+        ["StatusPlatformMismatch"] = "This is a {0} build and cannot be launched on {1}",
         ["Download"] = "Download",
         ["News"] = "News",
         ["NewsTooltip"] = "Read the release announcement",
@@ -234,6 +250,7 @@ public sealed class LocalizationService : ObservableObject
         ["StatusExtracting"] = "Download complete, extracting…",
         ["StatusInstalled"] = "{0} installed. Click Launch to open it.",
         ["StatusArchiveKept"] = " Archive kept in the downloads folder.",
+        ["StatusDownloadedOnly"] = "{0} ({1}) downloaded to {2}; other-platform archives are not extracted.",
         ["StatusCancelled"] = "Download cancelled.",
         ["StatusDownloadFailed"] = "Download failed: {0}",
         ["StatusAlreadyInstalled"] = "{0} is already installed; launch it directly.",

@@ -69,7 +69,8 @@ GodotManager/
 | --- | --- |
 | `GodotArchiveService` | `FetchAsync()` 抓取归档页，`Parse()` 用正则提取版本号 / 类型 / 日期 / 下载页；去重后按版本号降序、日期降序排序 |
 | `GodotVersionComparer` | 逐段数值比较版本（`4.10 > 4.9 > 4.7.2 > 4.7`），`GetMajor()` 供竖向 tab 分组 |
-| `DownloadService` | `BuildDownloadUrl()` 拼 `downloads.godotengine.org` 直链；`DownloadAsync()` 流式写文件、节流上报进度、支持取消 |
+| `DownloadLinkService` | 抓版本下载页 HTML，按目标平台分组和 Standard / .NET 按钮取真实 `href`；`Parse()` 可单独验证解析结果 |
+| `DownloadService` | `DownloadAsync()` 流式写文件、节流上报进度、支持取消 |
 | `InstallService` | `GetTempZipPath()` 定位 `<安装目录>\downloads`；`Install()` 解压并定位主 exe；`Scan()` 扫描已有版本；`CleanupExpiredDownloads()` 清理过期安装包 |
 | `AppStateService` | 读写 `%LOCALAPPDATA%\GodotManager\state.json`，配置损坏或目录不可用时回退默认值 |
 | `ReleaseCacheService` | 读写 `releases-cache.json`，在 `GodotRelease` 与缓存 DTO 之间转换；读损坏或写失败都静默降级 |
@@ -86,9 +87,9 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 
 1. **启动**：`Program.Main` → `App` → `MainWindow` 构造 VM → VM 构造时读取 `state.json`、清理过期安装包、扫描安装目录并写入记录 → `LoadReleasesAsync()` 先读 `releases-cache.json`，缓存有效（默认 2 天内）则直接加载，否则联网拉取。
 2. **在线列表 / 刷新**：联网时 `FetchAsync()` 拿 HTML → `Parse()` 得到 `GodotRelease` 列表 → **成功后写入缓存** → `SetReleases()` 重建 tab 并筛选 → `FilteredReleases` 绑定 ListBox。点刷新图标会强制联网；若距上次「刷新触发的联网」不足 30 秒，则不发请求，直接从本地缓存重新解析。联网失败时回退到本地缓存（忽略过期），保证列表可用。
-3. **下载安装**：`BuildDownloadUrl()` → `DownloadAsync()` 写入 `<安装目录>\downloads\*.zip` → `Install()` 以包内主 exe 名（如 `Godot_v4.4.1-stable_mono_win64`）作为版本目录名，剥掉官方包自带的同名外层目录后解压并定位主 exe → 追加 `InstalledVersion` 记录并保存 → 按设置窗口里的安装包策略决定是否删除 zip（默认保留 30 天；取消或失败始终删除残缺文件）。
-4. **扫描已有版本**：遍历安装目录的一级子目录（跳过 `downloads`），找匹配 `Godot_v{版本}-{类型}[_mono]_win(32|64).exe` 的主程序（忽略 `_console.exe`）；根目录直接放的 exe 也识别。按 exe 路径去重，UI 只显示位于当前安装目录下的记录。
-5. **启动 / 卸载**：`Process.Start` 直接启动记录的 exe；卸载删除版本目录（若 exe 就在安装目录根下，则只删该 exe，避免删掉整个安装目录）。
+3. **下载安装**：先定平台与是否解压——主按钮传 `PlatformService.Current` 且 `extract=true`，下拉项传所点平台且 `extract=false` → `DownloadLinkService.GetDownloadUrlAsync()` 抓版本页按钮 href → `DownloadAsync()` 写入 `<安装目录>\downloads\*.zip`。`extract=true` 时：重复判断按「版本 + 类型 + 平台」比对（旧记录的 `Platform` 为空时从安装路径推断：`Godot_mono.app` → macOS、含 `linux` → Linux、其余 → Windows，避免本机 Windows 版挡住同版本 macOS 包），通过后才 `Install()` 按目标平台生成版本目录名（如 `Godot_v4.4.1-stable_mono_win64`）、解压并定位主程序，记录里写入 `Platform` 与带平台后缀的 `Id`（同一版本可装多个平台）→ 追加 `InstalledVersion` 并保存 → 按设置窗口里的安装包策略决定是否删除 zip（默认保留 30 天；取消或失败始终删除残缺文件）。`extract=false` 时：跳过重复判断，zip 始终保留，状态栏显示 `StatusDownloadedOnly` 提示保存位置，不解压、不写已安装记录。
+4. **扫描已有版本**：遍历安装目录的一级子目录（跳过 `downloads`），用 `GodotNameRegex` 从目录名 / 可执行文件名的平台后缀反推目标系统，按该平台规则找主程序；目录名不规范时依次尝试三种平台。根目录直接放的可执行文件也识别。按路径去重，UI 只显示位于当前安装目录下的记录，并显示平台标签。
+5. **启动 / 卸载**：先校验记录的 `Platform` 是否等于 `PlatformService.Current`，不一致则状态栏提示异平台包无法启动；Windows / Linux 用 `Process.Start` 启动记录的可执行文件（Linux 需可执行权限），macOS 用 `open -a` 打开 `.app`；卸载删除版本目录（若可执行文件就在安装目录根下，则只删该文件，避免删掉整个安装目录）。
 6. **临时文件清理**：启动时以及切换安装目录时，删除 `downloads` 内修改时间超过 `TempFileRetentionDays`（默认 30 天）的 `.zip` / `.part`；安装目录根目录下的旧 zip 不动。
 
 ## 状态与持久化
@@ -118,14 +119,15 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 
 - 归档页条目正则：`ReleaseRegex` 匹配 `<a class="archive-version" ... href="/download/archive/{slug}">` 中的 `h4`（版本 Id）与 `span`（英文日期）；在每个条目到下一个条目之间的片段里用 `NewsRegex` 取 `btn-release-notes` 的 `/article/...` 链接，转成绝对 URL 存入 `GodotRelease.NewsUrl`（少数版本没有公告则留空），随 `releases-cache.json` 一起缓存。
 - 版本号解析：`{数字版本}-{flavor}`，`flavor` 的字母前缀即发布类型（`stable` / `rc` / `beta` / `dev` / `alpha`）。
-- 下载直链：`https://downloads.godotengine.org/?version={version}&flavor={flavor}&slug={slug}&platform={platform}`，服务端 302 到官方对象存储。slug / platform 由 `PlatformService.GetDownloadSpec()` 按当前系统选择：Windows `win64.exe.zip` / `mono_win64.zip` + `windows.64`，macOS `macos.universal.zip` / `mono_macos.universal.zip` + `macos.universal`，Linux `linux.x86_64.zip` / `mono_linux_x86_64.zip` + `linux.64`
+- 下载链接：从版本下载页（`GodotRelease.DownloadPageUrl`）抓「Supported platforms」区域里目标平台按钮的真实 `href`，不在本地拼参数。目标平台由这次点击决定：主按钮走 `PlatformService.Current`，下拉项用 `PlatformService.Parse(CommandParameter)` 解析枚举名；没有选中状态、不持久化，`GetPagePlatformName(platform)` 给出页面分组名（Windows / macOS / Linux），按钮 class 含 `btn-download-primary--mono` 即 .NET 版。抓到的链接仍是 `https://downloads.godotengine.org/?...`，服务端 302 到官方对象存储。
+- 下载按钮：用 Avalonia 内置 `SplitButton`（继承 `ContentControl`）。主区域绑定 `DownloadCommand`，直接以 `PlatformService.Current` 下载当前系统版本；右侧箭头打开 `MenuFlyout`，三个 `MenuItem`（Windows / macOS / Linux）各自绑定 `DownloadForPlatformCommand`，`CommandParameter` 为枚举名字符串，点哪个就立即下载哪个平台。下拉里没有当前平台标记、也没有选中状态，不写 `state.json`，两个命令都汇入 `DownloadCoreAsync(release, platform)`。因 SplitButton 不是 Button，`App.axaml` 里 `.soft` 样式要单独写一份 `SplitButton.soft`。
 - 排序：在线列表与已安装列表都按语义化版本号降序；在线列表同版本号内按发布日期降序。
 - 主版本 tab：从解析结果按 `GetMajor()` 分组动态生成，不是硬编码。
 - 发布类型筛选：`stable` / `rc` / `beta` / `dev` / `alpha` 各有一个复选框（按此顺序），默认勾前三个；`ApplyFilter()` 统一走 `IsChannelEnabled(channel)`，勾选状态持久化到 `state.json`。旧配置缺少 `ShowStable` 时由 `AppStateService.Load()` 一次性迁移到新默认值。
 - `.NET` 标签：`GodotRelease.ShowDotNetTag` 由 VM 按 `UseMono` 在 `SetReleases()` 和 `OnUseMonoChanged()` 中同步，勾选变化时重建 `FilteredReleases` 让列表项重新绑定。
 - 列表项操作区：版本 DataTemplate 里「新闻 / 下载」按钮带 `rowAction` 类，`App.axaml` 的 `ListBoxItem:pointerover` 样式切换 `Opacity` / `IsHitTestVisible`（按钮始终占位，行高与列宽恒定，避免 hover 抖动）；下载按钮把当前项作为 `CommandParameter`，避免误下旧选中项。`.NET 版` 开关常驻搜索框左侧，直接绑定全局 `UseMono`。
 - 缓存判定：`DateTime.Now - CachedAt > CacheExpirationDays` 视为过期；节流计时只统计「刷新触发的联网」，启动时的自动拉取不计入，因此启动后第一次点刷新仍会立即联网。
-- 国际化：`LocalizationService` 单例，XAML 绑定 `L.Xxx` 属性，状态栏等带参数文案用 `F(key, args)`；切换语言时通知所有字符串属性，并重建 tab / 已安装列表以刷新动态文本。搜索关键字不持久化（临时输入），其余勾选与下拉全部持久化。
+- 国际化：`LocalizationService` 单例，XAML 绑定 `L.Xxx` 属性，状态栏等带参数文案用 `F(key, args)`；切换语言时通知所有字符串属性，并重建 tab / 已安装列表以刷新动态文本。搜索关键字不持久化（临时输入）；下载平台由每次点击决定（主按钮当前系统、下拉项对应平台），没有选中状态也不持久化；其余设置项全部持久化。
 - 跨平台打开：链接与目录统一走 `ShellService`；Windows 用 `UseShellExecute` 打开 URL、`explorer.exe` 打开目录，macOS 用 `open`（Finder），Linux 用 `xdg-open`；参数放 `ArgumentList`，路径含空格也安全。
 
 ## 设计取舍与限制
@@ -134,24 +136,24 @@ ViewModel 命令（`[RelayCommand]` 生成）：`LoadReleasesCommand`（启动�
 | --- | --- |
 | 正则解析静态 HTML，不用 HTML 解析库 | 依赖少；官网改版会导致列表为空，状态栏会提示获取失败 |
 | 版本列表缓存 2 天 + 刷新 30 秒节流 | 联网成功后落盘 `releases-cache.json`；启动优先用缓存，过期才联网；30 秒内重复刷新从本地解析，避免频繁请求官网；断网时还能用旧缓存 |
-| 官网静态页 + 下载直链分离 | 列表和下载互不依赖，点下载不再请求网页 |
+| 下载链接从页面按钮抓取 | 不本地拼 slug / platform，官网参数变动也能跟上；代价是点下载会先请求一次版本页（30 秒超时）。失败时状态栏上方展开详情面板：原因是 `DownloadFailureReason`，源页面来自 `DownloadLinkService.GetPageUrl()`，文件链接 `DownloadFileUrl` 只有抓到 href 后才填（否则显示 `StatusLinkNotResolved`），两个链接都能用 `OpenUrlCommand` 打开 |
 | 编译绑定（`x:DataType` / `DataType`） | Avalonia 12 默认开启，绑定错误在编译期暴露 |
 | 设置即时生效 + 全量配置持久化 | 设置窗口复用主 VM，语言 / 目录 / 策略 / 勾选变更立即写入 `state.json`，无需额外「保存」按钮；下次启动按字段恢复 |
-| 错误统一显示在状态栏 | 小工具不引入日志框架；`LogToTrace()` 输出 Avalonia 跟踪日志 |
+| 错误统一显示在状态栏 + 失败详情面板 | 小工具不引入日志框架；下载失败会在状态栏上方展开可换行的详情，避免单行 `TextTrimming` 截断 URL；`LogToTrace()` 输出 Avalonia 跟踪日志 |
 | 扫描 + `state.json` 双来源 | 手动解压的版本也能识别；记录跨安装目录保留，切目录不丢 |
 | 卸载保护 / 清理范围限制 | 避免误删整个安装目录或用户已有的 zip |
 | 无单元测试项目 | 目前靠手动验证清单（见 [development.md](development.md#手动验证清单)） |
 
 ## 平台支持现状
 
-下载、解压、识别与启动已覆盖三大平台，参数由 `PlatformService`（基于 `ShellService.Current`）集中提供：
+下载、解压、识别与启动已覆盖三大平台。主按钮下载并解压当前系统版本；「下载并解压」下拉三项各自只下载对应平台的包到 `downloads`，不解压、不写已安装记录，也没有选中状态或持久化。下载链接从官网版本页按钮抓取；平台分组名、包名、安装目录名和记录 Id 由 `PlatformService` 按目标平台提供：
 
-| 平台 | 下载 slug | platform | 包内可执行文件 |
-| --- | --- | --- | --- |
-| Windows x86_64 | `win64.exe.zip` / `mono_win64.zip` | `windows.64` | `Godot_v{版本}-{类型}[_mono]_win64.exe` |
-| macOS universal | `macos.universal.zip` / `mono_macos.universal.zip` | `macos.universal` | `Godot.app` / `Godot_mono.app` 的 `Contents/MacOS/Godot` |
-| Linux x86_64 | `linux.x86_64.zip` / `mono_linux_x86_64.zip` | `linux.64` | `Godot_v{版本}-{类型}[_mono]_linux.x86_64` |
+| 平台 | 页面分组名 | 包内可执行文件 |
+| --- | --- | --- |
+| Windows x86_64 | `Windows` | `Godot_v{版本}-{类型}[_mono]_win64.exe` |
+| macOS universal | `macOS` | `Godot.app` / `Godot_mono.app` 的 `Contents/MacOS/Godot` |
+| Linux x86_64 | `Linux` | `Godot_v{版本}-{类型}[_mono]_linux.x86_64` |
 
-解压规则：Windows / Linux 剥掉包内同名外层目录，macOS 保留 `.app` bundle 结构；Unix 平台会给主可执行文件补上执行权限。启动规则：Windows / Linux 直接执行，macOS 用 `open -a` 打开 `.app`。扫描规则：Windows / Linux 按文件名正则识别（忽略 `_console`），macOS 从版本目录名解析版本、在目录内找 `Contents/MacOS/Godot`。
+解压规则：Windows / Linux 剥掉包内同名外层目录，macOS 保留 `.app` bundle 结构；Unix 主机上会给主可执行文件补执行权限。启动规则：仅当记录平台与当前系统一致时允许启动，Windows / Linux 直接执行，macOS 用 `open -a` 打开 `.app`；异平台包只下载、不解压。扫描规则：从目录名 / 文件名的平台后缀自动识别，因此同一安装目录下混合的三个平台版本都能列出；`InstalledVersion.Platform` 为空的旧记录按当前系统处理。
 
 已跨平台的部分：Avalonia 的 `UsePlatformDetect()`、版本解析 / 排序 / tab / 下载进度 / 过期清理 / `LocalApplicationData` 配置路径，以及 `ShellService` 的「打开链接 / 打开目录」。仍需注意：`WinExe` + Windows 清单不会生成正规的 macOS `.app` bundle，正式分发 Godot Manager 自身仍需各平台打包步骤。

@@ -17,6 +17,7 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly AppStateService _stateService = new();
     private readonly DownloadService _downloadService = new();
+    private readonly DownloadLinkService _linkService = new();
     private readonly ReleaseCacheService _cacheService = new();
     private readonly Func<Task<string?>> _pickFolder;
     private readonly Func<string, string, Task<bool>> _confirm;
@@ -68,6 +69,10 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private int _deletePolicyIndex;
     [ObservableProperty] private string _installDirectory = string.Empty;
     [ObservableProperty] private string _status = string.Empty;
+    [ObservableProperty] private bool _hasDownloadFailure;
+    [ObservableProperty] private string _downloadFailureReason = string.Empty;
+    [ObservableProperty] private string _downloadSourcePageUrl = string.Empty;
+    [ObservableProperty] private string _downloadFileUrl = string.Empty;
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _progressText = string.Empty;
     [ObservableProperty] private bool _isLoading;
@@ -75,6 +80,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadForPlatformCommand))]
     private GodotRelease? _selectedRelease;
 
     [ObservableProperty]
@@ -82,6 +88,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadForPlatformCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelDownloadCommand))]
     private bool _isDownloading;
 
@@ -467,34 +474,83 @@ public partial class MainWindowViewModel : ObservableObject
     private bool CanDownload(GodotRelease? release) =>
         !IsDownloading && (release is not null || SelectedRelease is not null);
 
-    [RelayCommand(CanExecute = nameof(CanDownload))]
-    private async Task DownloadAsync(GodotRelease? release)
+    private bool CanDownloadForPlatform(string? _) =>
+        !IsDownloading && SelectedRelease is not null;
+
+    /// <summary>
+    /// 同版本的不同平台可以并存。旧记录的 Id 没有平台后缀，所以按版本 / 类型 / 平台判断，
+    /// 平台缺失时从安装路径推断，避免 Windows 版挡住 macOS 版下载。
+    /// </summary>
+    private bool IsAlreadyInstalled(GodotRelease release, bool mono, ShellPlatform platform) =>
+        Installed.Any(item =>
+            item.Version == release.Version &&
+            item.Flavor == release.Flavor &&
+            item.IsMono == mono &&
+            ResolveInstalledPlatform(item) == platform);
+
+    private static ShellPlatform ResolveInstalledPlatform(InstalledVersion item)
     {
-        release ??= SelectedRelease;
+        if (!string.IsNullOrWhiteSpace(item.Platform))
+        {
+            return PlatformService.Parse(item.Platform);
+        }
+
+        var path = item.ExecutablePath.Replace('\\', '/');
+        if (path.Contains(".app/", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("/Contents/MacOS/", StringComparison.OrdinalIgnoreCase))
+        {
+            return ShellPlatform.Mac;
+        }
+
+        return path.Contains("linux", StringComparison.OrdinalIgnoreCase)
+            ? ShellPlatform.Linux
+            : ShellPlatform.Windows;
+    }
+
+    /// <summary>主按钮：下载当前系统版本并解压安装。</summary>
+    [RelayCommand(CanExecute = nameof(CanDownload))]
+    private async Task DownloadAsync(GodotRelease? release) =>
+        await DownloadCoreAsync(release ?? SelectedRelease, PlatformService.Current, extract: true);
+
+    /// <summary>下拉项：其它平台只下载安装包，不解压、不记录为已安装。</summary>
+    [RelayCommand(CanExecute = nameof(CanDownloadForPlatform))]
+    private async Task DownloadForPlatformAsync(string platformName) =>
+        await DownloadCoreAsync(SelectedRelease, PlatformService.Parse(platformName), extract: false);
+
+    private async Task DownloadCoreAsync(GodotRelease? release, ShellPlatform platform, bool extract)
+    {
         if (release is null || IsDownloading)
         {
             return;
         }
 
         var mono = UseMono;
-        var deleteArchive = DeleteArchiveAfterInstall;
-        var id = release.Id + (mono ? "-mono" : "");
-        if (Installed.Any(version => version.Id == id))
+        var sourcePageUrl = DownloadLinkService.GetPageUrl(release);
+        string? downloadUrl = null;
+
+        HasDownloadFailure = false;
+        DownloadFailureReason = string.Empty;
+        DownloadSourcePageUrl = sourcePageUrl;
+        DownloadFileUrl = string.Empty;
+
+        if (extract && IsAlreadyInstalled(release, mono, platform))
         {
-            Status = L.F("StatusAlreadyInstalled", release.Id);
+            Status = L.F("StatusAlreadyInstalled",
+                release.Id + " (" + PlatformService.GetDisplayName(platform) + ")");
             return;
         }
 
         IsDownloading = true;
         _downloadCts = new CancellationTokenSource();
-        var zipPath = InstallService.GetTempZipPath(InstallDirectory, release, mono);
+        var zipPath = InstallService.GetTempZipPath(InstallDirectory, release, mono, platform);
         var keepArchive = false;
 
         try
         {
             Progress = 0;
             ProgressText = string.Empty;
-            Status = L.F("StatusDownloading", release.Id + (mono ? " (.NET)" : string.Empty));
+            Status = L.F("StatusDownloading", release.Id + (mono ? " (.NET)" : string.Empty) +
+                                              " · " + PlatformService.GetDisplayName(platform));
 
             var progress = new Progress<DownloadProgress>(value =>
             {
@@ -502,21 +558,33 @@ public partial class MainWindowViewModel : ObservableObject
                 ProgressText = value.Text;
             });
 
-            await _downloadService.DownloadAsync(
-                DownloadService.BuildDownloadUrl(release, mono), zipPath, progress, _downloadCts.Token);
+            downloadUrl = await _linkService.GetDownloadUrlAsync(release, mono, platform, _downloadCts.Token);
+            await _downloadService.DownloadAsync(downloadUrl, zipPath, progress, _downloadCts.Token);
 
-            Status = L.T("StatusExtracting");
-            var installed = await Task.Run(() => InstallService.Install(zipPath, release, mono, InstallDirectory));
+            if (extract)
+            {
+                Status = L.T("StatusExtracting");
+                var installed = await Task.Run(() =>
+                    InstallService.Install(zipPath, release, mono, InstallDirectory, platform));
 
-            _stateService.State.Installed.RemoveAll(version =>
-                PathsEqual(version.ExecutablePath, installed.ExecutablePath));
-            _stateService.State.Installed.Add(installed);
-            _stateService.Save();
-            RefreshInstalled();
-            keepArchive = !deleteArchive;
+                _stateService.State.Installed.RemoveAll(version =>
+                    PathsEqual(version.ExecutablePath, installed.ExecutablePath));
+                _stateService.State.Installed.Add(installed);
+                _stateService.Save();
+                RefreshInstalled();
+                keepArchive = !DeleteArchiveAfterInstall;
 
-            Status = L.F("StatusInstalled", installed.DisplayName) +
-                     (deleteArchive ? string.Empty : L.T("StatusArchiveKept"));
+                Status = L.F("StatusInstalled", installed.DisplayName) +
+                         (DeleteArchiveAfterInstall ? string.Empty : L.T("StatusArchiveKept"));
+            }
+            else
+            {
+                // 异平台包只下载，留给用户在目标系统上手动解压。
+                keepArchive = true;
+                Status = L.F("StatusDownloadedOnly", release.Id,
+                    PlatformService.GetDisplayName(platform),
+                    InstallService.GetDownloadsDirectory(InstallDirectory));
+            }
         }
         catch (OperationCanceledException)
         {
@@ -525,6 +593,12 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception exception)
         {
             Status = L.F("StatusDownloadFailed", exception.Message);
+            HasDownloadFailure = true;
+            DownloadFailureReason = exception.Message;
+            DownloadSourcePageUrl = sourcePageUrl;
+            DownloadFileUrl = string.IsNullOrWhiteSpace(downloadUrl)
+                ? L.T("StatusLinkNotResolved")
+                : downloadUrl;
         }
         finally
         {
@@ -563,6 +637,13 @@ public partial class MainWindowViewModel : ObservableObject
         if (target is null)
         {
             Status = L.T("StatusSelectInstalled");
+            return;
+        }
+
+        if (target.TargetPlatform != PlatformService.Current)
+        {
+            Status = L.F("StatusPlatformMismatch", target.PlatformText,
+                PlatformService.GetDisplayName(PlatformService.Current));
             return;
         }
 
@@ -636,6 +717,25 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             ShellService.OpenUrl(GodotArchiveService.ArchiveUrl);
+        }
+        catch (Exception exception)
+        {
+            Status = L.F("StatusOpenUrlFailed", exception.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url) ||
+            !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        try
+        {
+            ShellService.OpenUrl(url);
         }
         catch (Exception exception)
         {

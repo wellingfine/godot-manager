@@ -107,9 +107,21 @@
                     <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0" ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding SelectedSummaryText}" Classes="muted"
                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <Button Grid.Column="1" Classes="soft" Content="{Binding L.DownloadExtract}"
-                                Command="{Binding DownloadCommand}"
-                                CommandParameter="{Binding SelectedRelease}" />
+                        <SplitButton Grid.Column="1" Classes="soft" Content="{Binding L.DownloadExtract}"
+                                     Command="{Binding DownloadCommand}"
+                                     CommandParameter="{Binding SelectedRelease}"
+                                     ToolTip.Tip="{Binding L.PlatformTooltip}">
+                            <SplitButton.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="Windows" Command="{Binding DownloadForPlatformCommand}"
+                                              CommandParameter="Windows" />
+                                    <MenuItem Header="macOS" Command="{Binding DownloadForPlatformCommand}"
+                                              CommandParameter="Mac" />
+                                    <MenuItem Header="Linux" Command="{Binding DownloadForPlatformCommand}"
+                                              CommandParameter="Linux" />
+                                </MenuFlyout>
+                            </SplitButton.Flyout>
+                        </SplitButton>
                     </Grid>
 
                     <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0"
@@ -209,20 +221,45 @@
             </Grid>
 
             <!-- 状态栏 -->
-            <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerBrush}"
-                    Padding="16,8,16,10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Status}"
-                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3"
-                                VerticalAlignment="Center" Margin="16,0,0,0">
-                        <TextBlock Classes="muted" FontSize="12" Text="{Binding L.SubtitlePrefix}"
-                                   VerticalAlignment="Center" />
-                        <Button Classes="link" Content="godotengine.org/download/archive"
-                                Command="{Binding OpenArchiveUrlCommand}" />
+            <StackPanel Grid.Row="3">
+                <Border IsVisible="{Binding HasDownloadFailure}"
+                        Background="{DynamicResource SubtleBrush}" Padding="16,8,16,8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DownloadFailureReason}"
+                                   TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding L.SourcePageLabel}" />
+                            <Button Classes="link" MaxWidth="800" HorizontalContentAlignment="Left"
+                                    Command="{Binding OpenUrlCommand}"
+                                    CommandParameter="{Binding DownloadSourcePageUrl}">
+                                <TextBlock Text="{Binding DownloadSourcePageUrl}" TextWrapping="Wrap" />
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding L.FileUrlLabel}" />
+                            <Button Classes="link" MaxWidth="800" HorizontalContentAlignment="Left"
+                                    Command="{Binding OpenUrlCommand}"
+                                    CommandParameter="{Binding DownloadFileUrl}">
+                                <TextBlock Text="{Binding DownloadFileUrl}" TextWrapping="Wrap" />
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
-                </Grid>
-            </Border>
+                </Border>
+                <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerBrush}"
+                        Padding="16,8,16,10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding Status}"
+                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="3"
+                                    VerticalAlignment="Center" Margin="16,0,0,0">
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding L.SubtitlePrefix}"
+                                       VerticalAlignment="Center" />
+                            <Button Classes="link" Content="godotengine.org/download/archive"
+                                    Command="{Binding OpenArchiveUrlCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Grid>
     </Border>
 </Window>
